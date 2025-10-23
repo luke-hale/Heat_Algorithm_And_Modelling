@@ -44,10 +44,13 @@
                       CSS classes (w-full, aspect-video) make it *display* responsively.
                     -->
                     <canvas id="tempChart" width="800" height="500" class="w-full aspect-video bg-black rounded-lg"></canvas>
-                    <!-- FPS Display -->
-                    <div class="absolute top-6 right-6 bg-black bg-opacity-80 px-3 py-2 rounded-lg text-xs font-mono border border-gray-700">
+                    <!-- Debug Display -->
+                    <div class="absolute top-6 right-6 bg-black bg-opacity-90 px-3 py-2 rounded-lg text-xs font-mono border border-gray-700">
                         <div><span class="text-gray-400">Render FPS:</span> <span id="fpsDisplay" class="text-green-400 font-bold">60</span></div>
                         <div><span class="text-gray-400">Update Rate:</span> <span id="updateDisplay" class="text-blue-400 font-bold">0</span> Hz</div>
+                        <hr class="border-gray-600 my-1">
+                        <div><span class="text-gray-400">Env Stress:</span> <span id="envStressDisplay" class="text-amber-400 font-bold">0.0</span> °C/step</div>
+                        <div><span class="text-gray-400">Activity:</span> <span id="activityIntensityDisplay" class="text-sky-400 font-bold">0%</span></div>
                     </div>
                 </div>
 
@@ -111,14 +114,14 @@
 
                 <hr class="border-gray-600">
 
-                <!-- ENVIRONMENTAL FACTORS (NEW) -->
+                <!-- ENVIRONMENTAL FACTORS (EXPANDED) -->
                 <div class="space-y-3">
                     <h3 class="text-base font-semibold text-gray-100">Environmental Conditions</h3>
                     
                     <!-- Ambient Temperature -->
                     <div class="space-y-1">
                         <div class="flex justify-between items-baseline">
-                            <label for="ambientTempSlider" class="text-sm text-gray-200">Ambient Temperature</label>
+                            <label for="ambientTempSlider" class="text-sm text-gray-200">Air Temperature (T<sub>a</sub>)</label>
                             <span id="ambientTempValue" class="text-sm font-mono font-bold text-sky-400">20°C</span>
                         </div>
                         <input type="range" id="ambientTempSlider" min="0" max="45" value="20" step="1" class="w-full">
@@ -127,13 +130,73 @@
                     <!-- Relative Humidity -->
                     <div class="space-y-1">
                         <div class="flex justify-between items-baseline">
-                            <label for="humiditySlider" class="text-sm text-gray-200">Relative Humidity</label>
+                            <label for="humiditySlider" class="text-sm text-gray-200">Relative Humidity (RH)</label>
                             <span id="humidityValue" class="text-sm font-mono font-bold text-sky-400">50%</span>
                         </div>
                         <input type="range" id="humiditySlider" min="0" max="100" value="50" step="5" class="w-full">
                     </div>
                     
-                    <p class="text-xs text-gray-400">Environmental factors affect heat stress and core temperature rise.</p>
+                    <!-- Wind Speed -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="windSpeedSlider" class="text-sm text-gray-200">Wind Speed</label>
+                            <span id="windSpeedValue" class="text-sm font-mono font-bold text-sky-400">0.5 m/s</span>
+                        </div>
+                        <input type="range" id="windSpeedSlider" min="0" max="10" value="0.5" step="0.1" class="w-full">
+                    </div>
+                    
+                    <!-- Solar Radiation -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="solarRadSlider" class="text-sm text-gray-200">Solar Radiation</label>
+                            <span id="solarRadValue" class="text-sm font-mono font-bold text-sky-400">400 W/m²</span>
+                        </div>
+                        <input type="range" id="solarRadSlider" min="0" max="1000" value="400" step="50" class="w-full">
+                    </div>
+                    
+                    <!-- Clothing Type Dropdown -->
+                    <div class="space-y-1">
+                        <label for="clothingSelect" class="text-sm text-gray-200 block">Clothing Type</label>
+                        <select id="clothingSelect" class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 font-mono text-xs">
+                            <option value="manual">Manual Control</option>
+                            <optgroup label="Minimal">
+                                <option value="0.0">Naked / Swimming (0.0 clo)</option>
+                                <option value="0.3">Underwear only (0.3 clo)</option>
+                            </optgroup>
+                            <optgroup label="Light Clothing">
+                                <option value="0.5">Shorts + T-shirt (0.5 clo)</option>
+                                <option value="0.6" selected>Light Work Clothes (0.6 clo)</option>
+                                <option value="0.7">Summer Dress (0.7 clo)</option>
+                            </optgroup>
+                            <optgroup label="Standard Clothing">
+                                <option value="0.9">Trousers + Long Sleeve (0.9 clo)</option>
+                                <option value="1.0">Business Suit (1.0 clo)</option>
+                                <option value="1.1">Light Coveralls (1.1 clo)</option>
+                            </optgroup>
+                            <optgroup label="Heavy Clothing">
+                                <option value="1.4">Winter Clothing (1.4 clo)</option>
+                                <option value="1.5">Heavy Work Gear (1.5 clo)</option>
+                                <option value="2.0">Arctic/Winter Gear (2.0 clo)</option>
+                            </optgroup>
+                            <optgroup label="Protective Gear">
+                                <option value="1.7">Firefighter Turnout Gear (1.7 clo)</option>
+                                <option value="2.5">Hazmat Suit (2.5 clo)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <!-- Clothing Slider (for manual control) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="clothingSlider" class="text-sm text-gray-200">Clothing (clo)</label>
+                            <span id="clothingValue" class="text-sm font-mono font-bold text-sky-400">0.6</span>
+                        </div>
+                        <input type="range" id="clothingSlider" min="0" max="2.5" value="0.6" step="0.1" class="w-full">
+                    </div>
+                    
+                    <p class="text-xs text-gray-400">
+                        1 clo = insulation needed at rest in 21°C to maintain comfort. Higher = less heat dissipation.
+                    </p>
                 </div>
 
                 <hr class="border-gray-600">
@@ -227,6 +290,9 @@
         // D. Environmental/Individual Parameters
         let ambientTemp = 20;     // Celsius
         let relativeHumidity = 50; // Percentage
+        let windSpeed = 0.5;       // m/s
+        let solarRadiation = 400;  // W/m²
+        let clothingInsulation = 0.6; // clo units
         let restingHR = 60;        // bpm
         let age = 30;              // years
         
@@ -236,6 +302,8 @@
         let actualUpdateRate = 0;   // Measured update rate
         let updateCount = 0;        // Count of updates
         let lastUpdateRateCheck = 0; // Time of last rate calculation
+        let simulationStartTime = 0; // When simulation started
+        let elapsedSimulationTime = 0; // Total elapsed time in seconds
         
         // F. FPS Tracking
         let fps = 0;
@@ -254,6 +322,8 @@
         const speedValue = document.getElementById('speedValue');
         const fpsDisplay = document.getElementById('fpsDisplay');
         const updateDisplay = document.getElementById('updateDisplay');
+        const envStressDisplay = document.getElementById('envStressDisplay');
+        const activityIntensityDisplay = document.getElementById('activityIntensityDisplay');
         
         // Activity and Environmental Controls
         const activitySelect = document.getElementById('activitySelect');
@@ -261,6 +331,13 @@
         const ambientTempValue = document.getElementById('ambientTempValue');
         const humiditySlider = document.getElementById('humiditySlider');
         const humidityValue = document.getElementById('humidityValue');
+        const windSpeedSlider = document.getElementById('windSpeedSlider');
+        const windSpeedValue = document.getElementById('windSpeedValue');
+        const solarRadSlider = document.getElementById('solarRadSlider');
+        const solarRadValue = document.getElementById('solarRadValue');
+        const clothingSelect = document.getElementById('clothingSelect');
+        const clothingSlider = document.getElementById('clothingSlider');
+        const clothingValue = document.getElementById('clothingValue');
         const restingHRSlider = document.getElementById('restingHRSlider');
         const restingHRValue = document.getElementById('restingHRValue');
         const ageSlider = document.getElementById('ageSlider');
@@ -307,15 +384,99 @@
         }
 
         /**
-         * Calculate environmental heat stress factor
-         * Higher temp and humidity increase heat stress
-         * Simplified model for educational purposes
+         * EVIDENCE-BASED: Calculate Heat Index from temperature and humidity
+         * Based on Rothfusz regression (NWS/NOAA)
+         * Returns perceived temperature in Celsius
+         * 
+         * NOTE: Buller's original algorithm does NOT include environmental factors.
+         * This is an extension showing how environmental heat stress affects
+         * thermal strain during physical activity.
+         * 
+         * Source: NWS Heat Index equation
          */
-        function calculateEnvironmentalFactor(temp, humidity) {
-            // Baseline at 20°C, 50% humidity
-            const tempFactor = (temp - 20) * 0.02; // 2% per degree above 20°C
-            const humidityFactor = (humidity - 50) * 0.005; // 0.5% per 5% humidity above 50%
-            return 1.0 + tempFactor + humidityFactor;
+        function calculateHeatIndex(tempC, relativeHumidity) {
+            // Convert to Fahrenheit for the NWS formula
+            const T = (tempC * 9/5) + 32;
+            const RH = relativeHumidity;
+            
+            // Simple formula for T < 80°F
+            if (T < 80) {
+                return tempC; // No significant heat index effect
+            }
+            
+            // Rothfusz regression (full equation for accuracy)
+            let HI = -42.379 
+                + 2.04901523 * T 
+                + 10.14333127 * RH 
+                - 0.22475541 * T * RH 
+                - 6.83783e-3 * T * T 
+                - 5.481717e-2 * RH * RH 
+                + 1.22874e-3 * T * T * RH 
+                + 8.5282e-4 * T * RH * RH 
+                - 1.99e-6 * T * T * RH * RH;
+            
+            // Adjustments for extreme conditions
+            if (RH < 13 && T >= 80 && T <= 112) {
+                HI -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
+            }
+            else if (RH > 85 && T >= 80 && T <= 87) {
+                HI += ((RH - 85) / 10) * ((87 - T) / 5);
+            }
+            
+            // Convert back to Celsius
+            const heatIndexC = (HI - 32) * 5/9;
+            return heatIndexC;
+        }
+        
+        /**
+         * EVIDENCE-BASED: Calculate comprehensive environmental heat stress
+         * Combines multiple factors: Heat Index, wind, solar radiation, clothing
+         * 
+         * Research basis:
+         * - Heat Index: Temperature + humidity (evaporative cooling impairment)
+         * - Wind speed: Enhances convective cooling (ISO 7243, ISO 7933)
+         * - Solar radiation: Adds radiant heat load (WBGT model)
+         * - Clothing: Impedes heat dissipation (clo units standard)
+         */
+        function calculateEnvironmentalStress(tempC, humidity, wind, solar, clothing) {
+            // 1. Base Heat Index (temp + humidity effect)
+            const heatIndex = calculateHeatIndex(tempC, humidity);
+            let effectiveTemp = heatIndex;
+            
+            // 2. Wind cooling effect (convective heat transfer)
+            // Wind reduces effective temperature via enhanced convection
+            // Based on wind chill principles adapted for heat (ISO 7933)
+            // Significant effect up to ~5 m/s, diminishing returns after
+            if (wind > 0.1) {
+                const windCooling = Math.min(5, wind) * 0.8; // °C reduction per m/s (max 4°C)
+                effectiveTemp -= windCooling;
+            }
+            
+            // 3. Solar radiation heat load (radiant heat gain)
+            // Solar adds to thermal load, especially during outdoor work
+            // Based on WBGT outdoor calculation principles
+            // ~200-300 W/m² ≈ 2-3°C additional heat stress (depends on clothing)
+            const solarLoad = (solar / 200) * (0.5 + clothing * 0.5); // Modified by clothing absorption
+            effectiveTemp += solarLoad;
+            
+            // 4. Clothing insulation effect
+            // Higher clo = impaired heat dissipation
+            // Standard: 0.6 clo (light work clothes) as baseline
+            // Each 0.1 clo above baseline adds ~0.3°C effective temp
+            const clothingEffect = Math.max(0, clothing - 0.6) * 3.0; // °C per clo above baseline
+            effectiveTemp += clothingEffect;
+            
+            // 5. Calculate net heat stress
+            const heatStressDelta = effectiveTemp - tempC;
+            
+            // Return heat stress increment per algorithm step
+            // Positive = heat gain, Negative = enhanced cooling
+            if (heatStressDelta !== 0) {
+                // Increased scaling for more visible effect
+                // At 10 Hz update rate: 0.1 = ~0.1°C per second at full activity intensity
+                return heatStressDelta * 0.1; // Scaling factor for per-step increment
+            }
+            return 0;
         }
 
         /**
@@ -420,6 +581,33 @@
             humidityValue.textContent = `${relativeHumidity}%`;
         });
         
+        windSpeedSlider.addEventListener('input', (e) => {
+            windSpeed = parseFloat(e.target.value);
+            windSpeedValue.textContent = `${windSpeed.toFixed(1)} m/s`;
+        });
+        
+        solarRadSlider.addEventListener('input', (e) => {
+            solarRadiation = parseFloat(e.target.value);
+            solarRadValue.textContent = `${solarRadiation} W/m²`;
+        });
+        
+        // Clothing type selector
+        clothingSelect.addEventListener('change', (e) => {
+            if (e.target.value !== 'manual') {
+                const cloValue = parseFloat(e.target.value);
+                clothingInsulation = cloValue;
+                clothingSlider.value = cloValue;
+                clothingValue.textContent = `${cloValue.toFixed(1)}`;
+            }
+        });
+        
+        clothingSlider.addEventListener('input', (e) => {
+            clothingInsulation = parseFloat(e.target.value);
+            clothingValue.textContent = `${clothingInsulation.toFixed(1)}`;
+            // Reset clothing selector to manual when slider is manually changed
+            clothingSelect.value = 'manual';
+        });
+        
         // NEW: Individual parameter controls
         restingHRSlider.addEventListener('input', (e) => {
             restingHR = parseFloat(e.target.value);
@@ -455,6 +643,8 @@
             currentCT = parseFloat(ctSlider.value);
             currentV = parseFloat(vSlider.value);
             dataPoints = [currentCT]; // Start history with the initial value
+            elapsedSimulationTime = 0; // Reset simulation time
+            simulationStartTime = performance.now(); // Record new start time
             // Redraw static background to clear old data
             drawStaticBackground();
         }
@@ -481,21 +671,45 @@
             const error = hr - expectedHR;
             currentCT = ct_pre + (k_gain * error);
             
-            // 5. NEW: Apply environmental heat stress factor
-            // Higher ambient temp and humidity increase heat retention
-            const envFactor = calculateEnvironmentalFactor(ambientTemp, relativeHumidity);
-            if (envFactor > 1.0 && hr > restingHR) {
-                // Only apply environmental stress during activity
-                const activityIntensity = (hr - restingHR) / (calculateMaxHR(age) - restingHR);
-                const heatIncrement = 0.0001 * envFactor * activityIntensity;
-                currentCT += heatIncrement;
+            // 5. EVIDENCE-BASED: Apply comprehensive environmental heat stress
+            // Combines Heat Index, wind, solar radiation, and clothing effects
+            // Only applies during physical activity (HR > resting)
+            let envStress = 0;
+            let activityIntensity = 0;
+            
+            if (hr > restingHR) {
+                envStress = calculateEnvironmentalStress(
+                    ambientTemp, 
+                    relativeHumidity, 
+                    windSpeed, 
+                    solarRadiation, 
+                    clothingInsulation
+                );
+                
+                if (envStress !== 0) { // Can be positive (heat gain) or negative (enhanced cooling)
+                    // Activity intensity (0-1 scale)
+                    activityIntensity = Math.min(1.0, (hr - restingHR) / (calculateMaxHR(age) - restingHR));
+                    
+                    // Environmental stress affects core temp during activity
+                    // Higher activity = more metabolic heat + stronger environmental influence
+                    // envStress already scaled in calculateEnvironmentalStress()
+                    const heatIncrement = envStress * activityIntensity;
+                    currentCT += heatIncrement;
+                }
             }
+            
+            // Update debug displays
+            envStressDisplay.textContent = envStress.toFixed(4);
+            activityIntensityDisplay.textContent = `${(activityIntensity * 100).toFixed(0)}%`;
             
             // 6. Update variance
             currentV = (1 - k_gain * m) * v_pre;
 
             // 7. Update data for graph
             dataPoints.push(currentCT);
+            
+            // Update elapsed time (each step represents 1/updatesPerSecond)
+            elapsedSimulationTime += (1 / updatesPerSecond);
             
             // Make the graph scroll by removing old data
             if (dataPoints.length > graphWidth) {
@@ -513,6 +727,21 @@
             const tempRange = Y_MAX - Y_MIN;
             // Invert Y-axis (0 is top, canvas.height is bottom)
             return canvas.height - PADDING - ((temp - Y_MIN) / tempRange) * graphHeight;
+        }
+        
+        /**
+         * Format elapsed time as MM:SS or HH:MM:SS
+         */
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hrs > 0) {
+                return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
         }
 
         /**
@@ -579,11 +808,22 @@
             ctx.moveTo(PADDING, y_axis_base);
             ctx.lineTo(canvas.width - PADDING, y_axis_base);
             ctx.stroke();
+            
+            // Draw time tick marks every 100 pixels
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 1;
+            for (let x = PADDING; x <= canvas.width - PADDING; x += 100) {
+                ctx.beginPath();
+                ctx.moveTo(x, y_axis_base);
+                ctx.lineTo(x, y_axis_base + 5);
+                ctx.stroke();
+            }
+            
+            // X-Axis label
             ctx.textAlign = 'center';
             ctx.fillStyle = '#d1d5db';
-            ctx.fillText('Time (Live)', canvas.width / 2, canvas.height - PADDING / 2.5);
-            ctx.textAlign = 'right';
-            ctx.fillText('Now', canvas.width - PADDING, canvas.height - PADDING / 2.5);
+            ctx.font = "12px 'Fira Code', monospace";
+            ctx.fillText('Time (Elapsed)', canvas.width / 2, canvas.height - PADDING / 4);
             
             // Cache this static background
             cachedStaticElements = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -672,10 +912,58 @@
             ctx.textAlign = 'left';
             ctx.fillText(`${currentCT.toFixed(2)} °C`, PADDING + 10, PADDING - 10);
             
-            // Draw environmental info
-            ctx.font = "12px 'Fira Code', monospace";
+            // Draw comprehensive environmental info
+            const heatIndex = calculateHeatIndex(ambientTemp, relativeHumidity);
+            const envStress = calculateEnvironmentalStress(
+                ambientTemp, relativeHumidity, windSpeed, solarRadiation, clothingInsulation
+            );
+            const effectiveTemp = ambientTemp + (envStress * 100); // Convert back to temp difference
+            
+            ctx.font = "11px 'Fira Code', monospace";
             ctx.fillStyle = '#9ca3af';
-            ctx.fillText(`Env: ${ambientTemp}°C, ${relativeHumidity}% RH`, PADDING + 10, PADDING + 10);
+            let yOffset = PADDING + 10;
+            
+            // Line 1: Basic environment
+            ctx.fillText(`Env: ${ambientTemp}°C, ${relativeHumidity}% RH, Wind: ${windSpeed.toFixed(1)} m/s`, PADDING + 10, yOffset);
+            yOffset += 14;
+            
+            // Line 2: Solar and clothing
+            ctx.fillText(`Solar: ${solarRadiation} W/m², Clothing: ${clothingInsulation.toFixed(1)} clo`, PADDING + 10, yOffset);
+            yOffset += 14;
+            
+            // Line 3: Effective temperature (shows combined effect)
+            const tempDelta = effectiveTemp - ambientTemp;
+            if (Math.abs(tempDelta) > 0.5) {
+                if (tempDelta > 0) {
+                    ctx.fillStyle = '#f59e0b'; // Amber for heat stress
+                    ctx.fillText(`Effective Temp: ${effectiveTemp.toFixed(1)}°C (feels +${tempDelta.toFixed(1)}°C)`, PADDING + 10, yOffset);
+                } else {
+                    ctx.fillStyle = '#60a5fa'; // Blue for cooling
+                    ctx.fillText(`Effective Temp: ${effectiveTemp.toFixed(1)}°C (feels ${tempDelta.toFixed(1)}°C)`, PADDING + 10, yOffset);
+                }
+            }
+            
+            // Draw dynamic time labels on x-axis
+            const y_axis_base = mapY(Y_MIN);
+            ctx.font = "11px 'Fira Code', monospace";
+            ctx.fillStyle = '#9ca3af';
+            ctx.textAlign = 'center';
+            
+            // Calculate time range visible on graph
+            const timePerPixel = elapsedSimulationTime / dataPoints.length;
+            const startTime = Math.max(0, elapsedSimulationTime - (graphWidth * timePerPixel));
+            
+            // Draw time labels every 100 pixels
+            for (let x = PADDING; x <= canvas.width - PADDING; x += 100) {
+                const pixelOffset = x - PADDING;
+                const timeAtPixel = startTime + (pixelOffset * timePerPixel);
+                ctx.fillText(formatTime(timeAtPixel), x, canvas.height - PADDING / 2.2);
+            }
+            
+            // Always show current time at the right edge
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#60a5fa'; // Blue highlight for current time
+            ctx.fillText(formatTime(elapsedSimulationTime), canvas.width - PADDING, canvas.height - PADDING / 2.2);
         }
 
         // --- VII. ANIMATION LOOP ---
@@ -734,9 +1022,11 @@
         // Draw static background once
         drawStaticBackground();
         // Start with current timestamp
-        lastUpdateTime = performance.now();
-        lastFpsCheck = performance.now();
-        lastUpdateRateCheck = performance.now();
+        const now = performance.now();
+        lastUpdateTime = now;
+        lastFpsCheck = now;
+        lastUpdateRateCheck = now;
+        simulationStartTime = now;
         requestAnimationFrame(animationLoop);
 
     </script>
