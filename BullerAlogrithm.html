@@ -37,13 +37,18 @@
             <!-- LEFT COLUMN: Chart and Warning Panel -->
             <div class="col-span-3 space-y-4">
                 <!-- CANVAS CHART CONTAINER -->
-                <div class="bg-gray-800 rounded-lg shadow-md p-4">
+                <div class="bg-gray-800 rounded-lg shadow-md p-4 relative">
                     <!-- 
                       The canvas element. 
                       Width and height attributes set the *drawing buffer* size.
                       CSS classes (w-full, aspect-video) make it *display* responsively.
                     -->
                     <canvas id="tempChart" width="800" height="500" class="w-full aspect-video bg-black rounded-lg"></canvas>
+                    <!-- FPS Display -->
+                    <div class="absolute top-6 right-6 bg-black bg-opacity-80 px-3 py-2 rounded-lg text-xs font-mono border border-gray-700">
+                        <div><span class="text-gray-400">Render FPS:</span> <span id="fpsDisplay" class="text-green-400 font-bold">60</span></div>
+                        <div><span class="text-gray-400">Update Rate:</span> <span id="updateDisplay" class="text-blue-400 font-bold">0</span> Hz</div>
+                    </div>
                 </div>
 
                 <!-- WARNING / ADVISORY PANEL -->
@@ -180,6 +185,18 @@
                     <p class="text-xs text-gray-400">Model's initial confidence. Lower = more confident.</p>
                 </div>
 
+                <hr class="border-gray-600">
+
+                <!-- NEW: Simulation Speed Control -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-baseline">
+                        <label for="speedSlider" class="text-base font-semibold text-gray-100">Simulation Speed</label>
+                        <span id="speedValue" class="text-base font-mono font-bold text-sky-400">10 Hz</span>
+                    </div>
+                    <input type="range" id="speedSlider" min="1" max="60" value="10" step="1" class="w-full">
+                    <p class="text-xs text-gray-400">Updates per second. Recommended: 10-30 Hz for smooth real-time simulation.</p>
+                </div>
+
                 <!-- Reset Button -->
                 <button id="resetButton" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-red-700 transition-colors">
                     Reset Simulation
@@ -213,7 +230,19 @@
         let restingHR = 60;        // bpm
         let age = 30;              // years
         
-        // E. DOM Element References
+        // E. Simulation Timing Control
+        let updatesPerSecond = 10;  // Hz - how many times per second to update
+        let lastUpdateTime = 0;     // Timestamp of last update
+        let actualUpdateRate = 0;   // Measured update rate
+        let updateCount = 0;        // Count of updates
+        let lastUpdateRateCheck = 0; // Time of last rate calculation
+        
+        // F. FPS Tracking
+        let fps = 0;
+        let frameCount = 0;
+        let lastFpsCheck = 0;
+        
+        // G. DOM Element References
         const hrSlider = document.getElementById('hrSlider');
         const hrValue = document.getElementById('hrValue');
         const ctSlider = document.getElementById('ctSlider');
@@ -221,8 +250,12 @@
         const vSlider = document.getElementById('vSlider');
         const vValue = document.getElementById('vValue');
         const resetButton = document.getElementById('resetButton');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        const updateDisplay = document.getElementById('updateDisplay');
         
-        // NEW: Activity and Environmental Controls
+        // Activity and Environmental Controls
         const activitySelect = document.getElementById('activitySelect');
         const ambientTempSlider = document.getElementById('ambientTempSlider');
         const ambientTempValue = document.getElementById('ambientTempValue');
@@ -233,16 +266,19 @@
         const ageSlider = document.getElementById('ageSlider');
         const ageValue = document.getElementById('ageValue');
         
-        // NEW: Advisory Panel Elements
+        // Advisory Panel Elements
         const advisoryPanel = document.getElementById('advisoryPanel');
         const advisoryIcon = document.getElementById('advisoryIcon');
         const advisoryTitle = document.getElementById('advisoryTitle');
         const advisoryMessage = document.getElementById('advisoryMessage');
         
-        // F. Canvas Setup
+        // H. Canvas Setup
         const canvas = document.getElementById('tempChart');
         const ctx = canvas.getContext('2d');
         graphWidth = canvas.width - PADDING * 2; // Usable width for the line
+        
+        // I. Drawing Optimization - Cache static elements
+        let cachedStaticElements = null; // Will store background/zones as ImageData
 
         // --- II. EVIDENCE-BASED WARNING THRESHOLDS ---
         const TEMP_THRESHOLDS = {
@@ -402,6 +438,12 @@
             ageValue.textContent = `${age}`;
         });
         
+        // NEW: Speed control
+        speedSlider.addEventListener('input', (e) => {
+            updatesPerSecond = parseFloat(e.target.value);
+            speedValue.textContent = `${updatesPerSecond} Hz`;
+        });
+        
         resetButton.addEventListener('click', resetSimulation);
 
         // --- V. CORE ALGORITHM LOGIC ---
@@ -413,6 +455,8 @@
             currentCT = parseFloat(ctSlider.value);
             currentV = parseFloat(vSlider.value);
             dataPoints = [currentCT]; // Start history with the initial value
+            // Redraw static background to clear old data
+            drawStaticBackground();
         }
 
         /**
@@ -472,60 +516,54 @@
         }
 
         /**
-         * Draws the entire chart (axes, grid, data line, and warning zones).
+         * OPTIMIZED: Draw static background elements (grid, zones, axes)
+         * Called once and cached
          */
-        function drawChart() {
-            // 1. Clear the canvas
+        function drawStaticBackground() {
+            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 2. Draw Grid & Y-Axis Labels
-            ctx.strokeStyle = '#374151'; // gray-700
-            ctx.fillStyle = '#d1d5db'; // gray-300
+            // Draw Grid & Y-Axis Labels
+            ctx.strokeStyle = '#374151';
+            ctx.fillStyle = '#d1d5db';
             ctx.font = "14px 'Fira Code', monospace";
             ctx.lineWidth = 1;
             
             for (let temp = Y_MIN; temp <= Y_MAX; temp += 0.5) {
                 const y = mapY(temp);
-                
-                // Draw grid line
                 ctx.beginPath();
                 ctx.moveTo(PADDING, y);
                 ctx.lineTo(canvas.width - PADDING, y);
                 ctx.stroke();
                 
-                // Draw label (only for whole numbers)
                 if (temp % 1 === 0) {
                     ctx.textAlign = 'right';
                     ctx.fillText(`${temp.toFixed(1)}°C`, PADDING - 10, y + 5);
                 }
             }
             
-            // 3. NEW: Draw Evidence-Based Warning Temperature Zones
-            // Normal Range (up to 37.2°C) - Green
+            // Draw Warning Temperature Zones
             const y_normal_top = mapY(TEMP_THRESHOLDS.normal.max);
             const y_normal_bottom = mapY(Y_MIN);
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.12)'; // Green with transparency
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
             ctx.fillRect(PADDING, y_normal_top, graphWidth, y_normal_bottom - y_normal_top);
             
-            // Elevated/Caution Zone (37.2-38.0°C) - Amber
             const y_elevated_top = mapY(TEMP_THRESHOLDS.elevated.max);
             const y_elevated_bottom = mapY(TEMP_THRESHOLDS.normal.max);
-            ctx.fillStyle = 'rgba(245, 158, 11, 0.15)'; // Amber with transparency
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
             ctx.fillRect(PADDING, y_elevated_top, graphWidth, y_elevated_bottom - y_elevated_top);
             
-            // Warning Zone (38.0-39.0°C) - Red
             const y_warning_top = mapY(TEMP_THRESHOLDS.warning.max);
             const y_warning_bottom = mapY(TEMP_THRESHOLDS.elevated.max);
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'; // Red with transparency
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
             ctx.fillRect(PADDING, y_warning_top, graphWidth, y_warning_bottom - y_warning_top);
             
-            // Danger Zone (>39.0°C) - Dark Red
             const y_danger_top = mapY(Y_MAX);
             const y_danger_bottom = mapY(TEMP_THRESHOLDS.warning.max);
-            ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; // Dark red with transparency
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.2)';
             ctx.fillRect(PADDING, y_danger_top, graphWidth, y_danger_bottom - y_danger_top);
             
-            // Draw zone labels
+            // Zone labels
             ctx.font = "11px 'Fira Code', monospace";
             ctx.textAlign = 'left';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
@@ -534,20 +572,36 @@
             ctx.fillText('Warning', PADDING + 5, y_warning_top + 15);
             ctx.fillText('Danger', PADDING + 5, y_danger_top + 15);
 
-            // 4. Draw X-Axis (Time)
-            ctx.strokeStyle = '#4b5563'; // gray-600
+            // X-Axis (Time)
+            ctx.strokeStyle = '#4b5563';
             ctx.beginPath();
             const y_axis_base = mapY(Y_MIN);
             ctx.moveTo(PADDING, y_axis_base);
             ctx.lineTo(canvas.width - PADDING, y_axis_base);
             ctx.stroke();
             ctx.textAlign = 'center';
-            ctx.fillStyle = '#d1d5db'; // gray-300
+            ctx.fillStyle = '#d1d5db';
             ctx.fillText('Time (Live)', canvas.width / 2, canvas.height - PADDING / 2.5);
             ctx.textAlign = 'right';
             ctx.fillText('Now', canvas.width - PADDING, canvas.height - PADDING / 2.5);
+            
+            // Cache this static background
+            cachedStaticElements = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
 
-            // 5. Draw the Temperature Fill (Gradient Area)
+        /**
+         * OPTIMIZED: Draw only dynamic elements (data line, dot, current values)
+         * Called every frame
+         */
+        function drawChart() {
+            // Restore cached background (much faster than redrawing)
+            if (cachedStaticElements) {
+                ctx.putImageData(cachedStaticElements, 0, 0);
+            } else {
+                drawStaticBackground();
+            }
+
+            // Draw the Temperature Fill (Gradient Area)
             const baseLineY = mapY(Y_MIN);
             const fillGrad = ctx.createLinearGradient(0, mapY(Y_MAX), 0, baseLineY);
             fillGrad.addColorStop(0, 'rgba(59, 130, 246, 0.4)'); // blue-500 @ 40%
@@ -563,70 +617,55 @@
             ctx.fillStyle = fillGrad;
             ctx.fill();
 
-            // 6. Draw the Temperature Line (Dynamic color based on temperature)
-            ctx.lineWidth = 3;
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetY = 2;
-            
-            for (let i = 0; i < dataPoints.length; i++) {
-                if (i === 0) continue;
+            // OPTIMIZED: Draw temperature line with batched segments by color
+            if (dataPoints.length > 0) {
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetY = 2;
                 
-                const x1 = PADDING + i - 1;
-                const y1 = mapY(dataPoints[i - 1]);
-                const x2 = PADDING + i;
-                const y2 = mapY(dataPoints[i]);
+                // Get current status for consistent coloring
+                const currentStatus = getWarningStatus(currentCT);
+                ctx.strokeStyle = currentStatus.color;
+                ctx.shadowColor = currentStatus.color + '60';
                 
-                // Color based on temperature level
-                const temp = dataPoints[i];
-                const status = getWarningStatus(temp);
-                ctx.strokeStyle = status.color;
-                ctx.shadowColor = status.color + '80'; // Add transparency to shadow
-                
+                // Draw entire line in one path for performance
                 ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
+                ctx.moveTo(PADDING, mapY(dataPoints[0]));
+                for (let i = 1; i < dataPoints.length; i++) {
+                    ctx.lineTo(PADDING + i, mapY(dataPoints[i]));
+                }
                 ctx.stroke();
+                ctx.shadowColor = 'transparent';
             }
-            ctx.shadowColor = 'transparent'; // Reset shadow
 
-            // 7. NEW: Draw Current Measurement Indicator (Dot)
+            // OPTIMIZED: Draw Current Measurement Indicator (Dot) - simplified
             if (dataPoints.length > 0) {
                 const currentX = PADDING + dataPoints.length - 1;
                 const currentY = mapY(currentCT);
                 const currentStatus = getWarningStatus(currentCT);
                 
-                // Outer glow
+                // Outer glow (single operation)
+                ctx.fillStyle = currentStatus.color + '40';
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, 10, 0, 2 * Math.PI);
-                ctx.fillStyle = currentStatus.color + '40'; // Semi-transparent
                 ctx.fill();
                 
                 // Middle ring
+                ctx.fillStyle = currentStatus.color;
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, 6, 0, 2 * Math.PI);
-                ctx.fillStyle = currentStatus.color;
                 ctx.fill();
                 
                 // Inner white dot
+                ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, 3, 0, 2 * Math.PI);
-                ctx.fillStyle = '#ffffff';
                 ctx.fill();
-                
-                // Pulsing effect (optional - adds shadow)
-                ctx.shadowColor = currentStatus.color;
-                ctx.shadowBlur = 15;
-                ctx.beginPath();
-                ctx.arc(currentX, currentY, 6, 0, 2 * Math.PI);
-                ctx.strokeStyle = currentStatus.color;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.shadowColor = 'transparent';
             }
 
-            // 8. Draw current value readout on chart
+            // Draw current value readout on chart
             const currentStatus = getWarningStatus(currentCT);
             ctx.fillStyle = currentStatus.color;
             ctx.font = "bold 20px 'Lexend', sans-serif";
@@ -635,7 +674,7 @@
             
             // Draw environmental info
             ctx.font = "12px 'Fira Code', monospace";
-            ctx.fillStyle = '#9ca3af'; // gray-400
+            ctx.fillStyle = '#9ca3af';
             ctx.fillText(`Env: ${ambientTemp}°C, ${relativeHumidity}% RH`, PADDING + 10, PADDING + 10);
         }
 
@@ -643,25 +682,62 @@
 
         /**
          * The main loop, runs on every animation frame.
-         * Updates algorithm, redraws chart, and updates advisory panel.
+         * Uses frame-rate limiting to control simulation speed.
+         * Visual updates happen every frame, but algorithm only updates at specified Hz.
          */
-        function animationLoop() {
-            // 1. Update the algorithm state
-            runAlgorithmStep();
+        function animationLoop(currentTime) {
+            // FPS Tracking
+            frameCount++;
+            if (currentTime - lastFpsCheck >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFpsCheck = currentTime;
+                fpsDisplay.textContent = fps;
+            }
             
-            // 2. Redraw the canvas
+            // Calculate time since last update (in milliseconds)
+            const timeSinceLastUpdate = currentTime - lastUpdateTime;
+            
+            // Calculate minimum time between updates based on Hz
+            const minTimeBetweenUpdates = 1000 / updatesPerSecond; // ms
+            
+            // Only update the algorithm if enough time has passed
+            if (timeSinceLastUpdate >= minTimeBetweenUpdates) {
+                // Update the algorithm state
+                runAlgorithmStep();
+                
+                // Update the advisory panel with current warnings
+                updateAdvisoryPanel();
+                
+                // Update rate tracking
+                updateCount++;
+                if (currentTime - lastUpdateRateCheck >= 1000) {
+                    actualUpdateRate = updateCount;
+                    updateCount = 0;
+                    lastUpdateRateCheck = currentTime;
+                    updateDisplay.textContent = actualUpdateRate;
+                }
+                
+                // Record this update time
+                lastUpdateTime = currentTime;
+            }
+            
+            // Always redraw the canvas for smooth visuals
             drawChart();
             
-            // 3. Update the advisory panel with current warnings
-            updateAdvisoryPanel();
-            
-            // 4. Request the next frame
+            // Request the next frame
             requestAnimationFrame(animationLoop);
         }
 
         // --- VIII. INITIALIZE ---
         resetSimulation();
-        animationLoop();
+        // Draw static background once
+        drawStaticBackground();
+        // Start with current timestamp
+        lastUpdateTime = performance.now();
+        lastFpsCheck = performance.now();
+        lastUpdateRateCheck = performance.now();
+        requestAnimationFrame(animationLoop);
 
     </script>
 </body>
