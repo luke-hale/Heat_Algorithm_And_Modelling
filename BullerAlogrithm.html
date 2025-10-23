@@ -1,0 +1,673 @@
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buller's Algorithm (ECTemp) Canvas Visualizer</title>
+    <!-- 1. Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- NEW: Import Google Fonts (Lexend for body, Fira Code for mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom accent color for sliders */
+        input[type="range"] {
+            accent-color: #38bdf8; /* sky-400 */
+        }
+        /* NEW: Apply imported fonts */
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        /* Use Fira Code for all mono elements */
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body class="h-full text-gray-100">
+    <div class="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+        <header class="mb-6 pb-4 border-b border-gray-700">
+            <h1 class="text-3xl font-bold tracking-tight text-blue-400">Buller's Algorithm (ECTemp) Visualizer</h1>
+            <!-- REMOVED: <p> tag with interactive text -->
+        </header>
+
+        <!-- Main content grid: Chart on left, controls on right -->
+        <div class="grid grid-cols-4 gap-6">
+
+            <!-- LEFT COLUMN: Chart and Warning Panel -->
+            <div class="col-span-3 space-y-4">
+                <!-- CANVAS CHART CONTAINER -->
+                <div class="bg-gray-800 rounded-lg shadow-md p-4">
+                    <!-- 
+                      The canvas element. 
+                      Width and height attributes set the *drawing buffer* size.
+                      CSS classes (w-full, aspect-video) make it *display* responsively.
+                    -->
+                    <canvas id="tempChart" width="800" height="500" class="w-full aspect-video bg-black rounded-lg"></canvas>
+                </div>
+
+                <!-- WARNING / ADVISORY PANEL -->
+                <div id="advisoryPanel" class="bg-gray-800 rounded-lg shadow-md p-4 border-l-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <svg id="advisoryIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 id="advisoryTitle" class="font-bold text-lg mb-1">Normal Core Temperature</h3>
+                            <p id="advisoryMessage" class="text-sm text-gray-300">Core temperature is within normal range. Continue monitoring.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: CONTROLS PANEL -->
+            <div class="bg-gray-800 rounded-lg shadow-md p-6 h-fit space-y-6 col-span-1">
+                
+                <!-- ACTIVITY LEVEL SELECTOR (NEW) -->
+                <div class="space-y-2">
+                    <label for="activitySelect" class="text-lg font-semibold text-gray-100 block">Occupational Activity</label>
+                    <select id="activitySelect" class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 font-mono text-sm">
+                        <option value="manual">Manual Control</option>
+                        <optgroup label="Light Activity (1-3 METs)">
+                            <option value="1.3">Sitting/Desk Work (1.3 METs)</option>
+                            <option value="2.0">Standing Light Work (2.0 METs)</option>
+                            <option value="2.5">Slow Walking (2.5 METs)</option>
+                        </optgroup>
+                        <optgroup label="Moderate Activity (3-6 METs)">
+                            <option value="3.0">Light Manual Labor (3.0 METs)</option>
+                            <option value="3.5">Walking 3mph (3.5 METs)</option>
+                            <option value="4.5">Moderate Labor (4.5 METs)</option>
+                            <option value="5.0">Brisk Walking 4mph (5.0 METs)</option>
+                        </optgroup>
+                        <optgroup label="Vigorous Activity (6+ METs)">
+                            <option value="6.0">Heavy Lifting (6.0 METs)</option>
+                            <option value="7.0">Jogging (7.0 METs)</option>
+                            <option value="8.0">Very Heavy Labor (8.0 METs)</option>
+                            <option value="10.0">Firefighting/Rescue (10.0 METs)</option>
+                            <option value="12.0">Intense Athletics (12.0 METs)</option>
+                        </optgroup>
+                    </select>
+                    <p class="text-xs text-gray-400">Sets heart rate based on metabolic equivalents (METs) from evidence-based activity levels.</p>
+                </div>
+
+                <hr class="border-gray-600">
+
+                <!-- HR Slider -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-baseline">
+                        <label for="hrSlider" class="text-base font-semibold text-gray-100">Heart Rate (HR)</label>
+                        <span id="hrValue" class="text-base font-mono font-bold text-sky-400">70 bpm</span>
+                    </div>
+                    <input type="range" id="hrSlider" min="50" max="200" value="70" class="w-full">
+                    <p class="text-xs text-gray-400">Manual override when "Manual Control" is selected above.</p>
+                </div>
+
+                <hr class="border-gray-600">
+
+                <!-- ENVIRONMENTAL FACTORS (NEW) -->
+                <div class="space-y-3">
+                    <h3 class="text-base font-semibold text-gray-100">Environmental Conditions</h3>
+                    
+                    <!-- Ambient Temperature -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="ambientTempSlider" class="text-sm text-gray-200">Ambient Temperature</label>
+                            <span id="ambientTempValue" class="text-sm font-mono font-bold text-sky-400">20°C</span>
+                        </div>
+                        <input type="range" id="ambientTempSlider" min="0" max="45" value="20" step="1" class="w-full">
+                    </div>
+
+                    <!-- Relative Humidity -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="humiditySlider" class="text-sm text-gray-200">Relative Humidity</label>
+                            <span id="humidityValue" class="text-sm font-mono font-bold text-sky-400">50%</span>
+                        </div>
+                        <input type="range" id="humiditySlider" min="0" max="100" value="50" step="5" class="w-full">
+                    </div>
+                    
+                    <p class="text-xs text-gray-400">Environmental factors affect heat stress and core temperature rise.</p>
+                </div>
+
+                <hr class="border-gray-600">
+
+                <!-- INDIVIDUAL PARAMETERS -->
+                <div class="space-y-3">
+                    <h3 class="text-base font-semibold text-gray-100">Individual Parameters</h3>
+                    
+                    <!-- Resting HR -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="restingHRSlider" class="text-sm text-gray-200">Resting Heart Rate</label>
+                            <span id="restingHRValue" class="text-sm font-mono font-bold text-sky-400">60 bpm</span>
+                        </div>
+                        <input type="range" id="restingHRSlider" min="40" max="100" value="60" step="1" class="w-full">
+                    </div>
+
+                    <!-- Age -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <label for="ageSlider" class="text-sm text-gray-200">Age (years)</label>
+                            <span id="ageValue" class="text-sm font-mono font-bold text-sky-400">30</span>
+                        </div>
+                        <input type="range" id="ageSlider" min="18" max="70" value="30" step="1" class="w-full">
+                    </div>
+                    
+                    <p class="text-xs text-gray-400">Used for calculating max HR (220 - age) and activity HR.</p>
+                </div>
+
+                <hr class="border-gray-600">
+
+                <!-- Initial CT Slider -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-baseline">
+                        <label for="ctSlider" class="text-base font-semibold text-gray-100">Initial Core Temp (CT₀)</label>
+                        <span id="ctValue" class="text-base font-mono font-bold text-sky-400">37.1 °C</span>
+                    </div>
+                    <input type="range" id="ctSlider" min="36.0" max="38.0" value="37.1" step="0.1" class="w-full">
+                    <p class="text-xs text-gray-400">Sets the starting temperature. Resets the chart.</p>
+                </div>
+
+                <!-- Initial Variance Slider -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-baseline">
+                        <label for="vSlider" class="text-base font-semibold text-gray-100">Initial Variance (v₀)</label>
+                        <span id="vValue" class="text-base font-mono font-bold text-sky-400">0.02</span>
+                    </div>
+                    <input type="range" id="vSlider" min="0.01" max="1.0" value="0.02" step="0.01" class="w-full">
+                    <p class="text-xs text-gray-400">Model's initial confidence. Lower = more confident.</p>
+                </div>
+
+                <!-- Reset Button -->
+                <button id="resetButton" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-red-700 transition-colors">
+                    Reset Simulation
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        // --- I. SETUP AND STATE ---
+
+        // A. Algorithm Constants (from literature)
+        const PROCESS_NOISE = 0.000484; // Q
+        const MEASUREMENT_NOISE = 356.4544; // R
+        
+        // B. Algorithm State Variables
+        let currentCT; // Current Core Temperature
+        let currentV;  // Current Variance
+        
+        // C. Graphing State
+        let dataPoints = []; // Array to hold temperature history
+        let graphWidth;      // Pixel width of the graph area
+        const Y_MIN = 36.0;  // Min temp on Y-axis
+        const Y_MAX = 41.0;  // Max temp on Y-axis
+        const PADDING = 60;  // Pixel padding around the graph
+        
+        // D. Environmental/Individual Parameters
+        let ambientTemp = 20;     // Celsius
+        let relativeHumidity = 50; // Percentage
+        let restingHR = 60;        // bpm
+        let age = 30;              // years
+        
+        // E. DOM Element References
+        const hrSlider = document.getElementById('hrSlider');
+        const hrValue = document.getElementById('hrValue');
+        const ctSlider = document.getElementById('ctSlider');
+        const ctValue = document.getElementById('ctValue');
+        const vSlider = document.getElementById('vSlider');
+        const vValue = document.getElementById('vValue');
+        const resetButton = document.getElementById('resetButton');
+        
+        // NEW: Activity and Environmental Controls
+        const activitySelect = document.getElementById('activitySelect');
+        const ambientTempSlider = document.getElementById('ambientTempSlider');
+        const ambientTempValue = document.getElementById('ambientTempValue');
+        const humiditySlider = document.getElementById('humiditySlider');
+        const humidityValue = document.getElementById('humidityValue');
+        const restingHRSlider = document.getElementById('restingHRSlider');
+        const restingHRValue = document.getElementById('restingHRValue');
+        const ageSlider = document.getElementById('ageSlider');
+        const ageValue = document.getElementById('ageValue');
+        
+        // NEW: Advisory Panel Elements
+        const advisoryPanel = document.getElementById('advisoryPanel');
+        const advisoryIcon = document.getElementById('advisoryIcon');
+        const advisoryTitle = document.getElementById('advisoryTitle');
+        const advisoryMessage = document.getElementById('advisoryMessage');
+        
+        // F. Canvas Setup
+        const canvas = document.getElementById('tempChart');
+        const ctx = canvas.getContext('2d');
+        graphWidth = canvas.width - PADDING * 2; // Usable width for the line
+
+        // --- II. EVIDENCE-BASED WARNING THRESHOLDS ---
+        const TEMP_THRESHOLDS = {
+            normal: { max: 37.2, color: '#10b981', borderColor: '#10b981' },      // green
+            elevated: { max: 38.0, color: '#f59e0b', borderColor: '#f59e0b' },    // amber
+            warning: { max: 39.0, color: '#ef4444', borderColor: '#ef4444' },     // red
+            danger: { max: 42.0, color: '#dc2626', borderColor: '#dc2626' }       // dark red
+        };
+
+        // --- III. HELPER FUNCTIONS ---
+
+        /**
+         * Calculate heart rate from METs using evidence-based formula
+         * Formula: Activity HR = ((METs + 5) / 6) × Resting HR
+         * Source: PMC9586849
+         */
+        function calculateHRFromMETs(mets, restingHR) {
+            return Math.round(((mets + 5) / 6) * restingHR);
+        }
+
+        /**
+         * Calculate maximum heart rate from age (220 - age)
+         */
+        function calculateMaxHR(age) {
+            return 220 - age;
+        }
+
+        /**
+         * Calculate environmental heat stress factor
+         * Higher temp and humidity increase heat stress
+         * Simplified model for educational purposes
+         */
+        function calculateEnvironmentalFactor(temp, humidity) {
+            // Baseline at 20°C, 50% humidity
+            const tempFactor = (temp - 20) * 0.02; // 2% per degree above 20°C
+            const humidityFactor = (humidity - 50) * 0.005; // 0.5% per 5% humidity above 50%
+            return 1.0 + tempFactor + humidityFactor;
+        }
+
+        /**
+         * Get warning status based on current core temperature
+         */
+        function getWarningStatus(temp) {
+            if (temp <= TEMP_THRESHOLDS.normal.max) {
+                return {
+                    level: 'normal',
+                    title: 'Normal Core Temperature',
+                    message: 'Core temperature is within normal range (36.1-37.2°C). Continue monitoring.',
+                    icon: 'info',
+                    ...TEMP_THRESHOLDS.normal
+                };
+            } else if (temp <= TEMP_THRESHOLDS.elevated.max) {
+                return {
+                    level: 'elevated',
+                    title: 'Elevated Core Temperature - CAUTION',
+                    message: 'Core temperature is elevated (37.3-38.0°C). Monitor closely. Consider reducing activity intensity, ensure adequate hydration, and seek cooler environment if possible.',
+                    icon: 'warning',
+                    ...TEMP_THRESHOLDS.elevated
+                };
+            } else if (temp <= TEMP_THRESHOLDS.warning.max) {
+                return {
+                    level: 'warning',
+                    title: 'High Core Temperature - WARNING',
+                    message: 'Moderate hyperthermia detected (38.1-39.0°C). CEASE activity immediately. Move to cooler environment. Hydrate. Remove excess clothing. Monitor for heat exhaustion symptoms.',
+                    icon: 'warning',
+                    ...TEMP_THRESHOLDS.warning
+                };
+            } else {
+                return {
+                    level: 'danger',
+                    title: 'CRITICAL Core Temperature - DANGER',
+                    message: 'Severe hyperthermia (>39.0°C). MEDICAL EMERGENCY. Implement active cooling immediately. Seek emergency medical attention. High risk of heat stroke.',
+                    icon: 'danger',
+                    ...TEMP_THRESHOLDS.danger
+                };
+            }
+        }
+
+        /**
+         * Update the advisory panel based on current temperature
+         */
+        function updateAdvisoryPanel() {
+            const status = getWarningStatus(currentCT);
+            
+            advisoryPanel.style.borderLeftColor = status.borderColor;
+            advisoryPanel.style.backgroundColor = status.color + '15'; // 15 = ~8% opacity
+            advisoryTitle.textContent = status.title;
+            advisoryTitle.style.color = status.color;
+            advisoryMessage.textContent = status.message;
+            advisoryIcon.style.color = status.color;
+            
+            // Update icon based on severity
+            if (status.level === 'normal') {
+                advisoryIcon.innerHTML = '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>';
+            } else if (status.level === 'elevated') {
+                advisoryIcon.innerHTML = '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>';
+            } else {
+                advisoryIcon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>';
+            }
+        }
+
+        // --- IV. EVENT LISTENERS ---
+
+        // Activity selector
+        activitySelect.addEventListener('change', (e) => {
+            if (e.target.value !== 'manual') {
+                const mets = parseFloat(e.target.value);
+                const calculatedHR = calculateHRFromMETs(mets, restingHR);
+                hrSlider.value = calculatedHR;
+                hrValue.textContent = `${calculatedHR} bpm`;
+            }
+        });
+
+        // Update slider readouts on input
+        hrSlider.addEventListener('input', (e) => {
+            hrValue.textContent = `${e.target.value} bpm`;
+            // Reset activity selector to manual when HR is manually changed
+            activitySelect.value = 'manual';
+        });
+        
+        ctSlider.addEventListener('input', (e) => {
+            ctValue.textContent = `${parseFloat(e.target.value).toFixed(1)} °C`;
+            resetSimulation(); // Reset if initial conditions change
+        });
+        
+        vSlider.addEventListener('input', (e) => {
+            vValue.textContent = `${parseFloat(e.target.value).toFixed(2)}`;
+            resetSimulation(); // Reset if initial conditions change
+        });
+        
+        // NEW: Environmental controls
+        ambientTempSlider.addEventListener('input', (e) => {
+            ambientTemp = parseFloat(e.target.value);
+            ambientTempValue.textContent = `${ambientTemp}°C`;
+        });
+        
+        humiditySlider.addEventListener('input', (e) => {
+            relativeHumidity = parseFloat(e.target.value);
+            humidityValue.textContent = `${relativeHumidity}%`;
+        });
+        
+        // NEW: Individual parameter controls
+        restingHRSlider.addEventListener('input', (e) => {
+            restingHR = parseFloat(e.target.value);
+            restingHRValue.textContent = `${restingHR} bpm`;
+            // Re-calculate activity HR if an activity is selected
+            if (activitySelect.value !== 'manual') {
+                const mets = parseFloat(activitySelect.value);
+                const calculatedHR = calculateHRFromMETs(mets, restingHR);
+                hrSlider.value = calculatedHR;
+                hrValue.textContent = `${calculatedHR} bpm`;
+            }
+        });
+        
+        ageSlider.addEventListener('input', (e) => {
+            age = parseFloat(e.target.value);
+            ageValue.textContent = `${age}`;
+        });
+        
+        resetButton.addEventListener('click', resetSimulation);
+
+        // --- V. CORE ALGORITHM LOGIC ---
+
+        /**
+         * Resets the simulation to the initial slider values.
+         */
+        function resetSimulation() {
+            currentCT = parseFloat(ctSlider.value);
+            currentV = parseFloat(vSlider.value);
+            dataPoints = [currentCT]; // Start history with the initial value
+        }
+
+        /**
+         * Performs one step of the Buller (ECTemp) Kalman filter.
+         * EXTENDED: Now includes environmental heat stress factors
+         */
+        function runAlgorithmStep() {
+            const hr = parseFloat(hrSlider.value);
+            
+            // 1. Predict next state
+            const ct_pre = currentCT;
+            const v_pre = currentV + PROCESS_NOISE;
+            
+            // 2. Calculate Kalman Gain
+            const m = -9.1428 * ct_pre + 384.4286;
+            const k_gain = (v_pre * m) / (m * m * v_pre + MEASUREMENT_NOISE);
+            
+            // 3. Calculate expected HR from predicted temp
+            const expectedHR = (-4.5714 * ct_pre * ct_pre) + (384.4286 * ct_pre) - 7887.1;
+            
+            // 4. Update estimate with measurement
+            const error = hr - expectedHR;
+            currentCT = ct_pre + (k_gain * error);
+            
+            // 5. NEW: Apply environmental heat stress factor
+            // Higher ambient temp and humidity increase heat retention
+            const envFactor = calculateEnvironmentalFactor(ambientTemp, relativeHumidity);
+            if (envFactor > 1.0 && hr > restingHR) {
+                // Only apply environmental stress during activity
+                const activityIntensity = (hr - restingHR) / (calculateMaxHR(age) - restingHR);
+                const heatIncrement = 0.0001 * envFactor * activityIntensity;
+                currentCT += heatIncrement;
+            }
+            
+            // 6. Update variance
+            currentV = (1 - k_gain * m) * v_pre;
+
+            // 7. Update data for graph
+            dataPoints.push(currentCT);
+            
+            // Make the graph scroll by removing old data
+            if (dataPoints.length > graphWidth) {
+                dataPoints.shift();
+            }
+        }
+
+        // --- VI. CANVAS DRAWING LOGIC ---
+
+        /**
+         * Helper function to map a temperature value to a Y-pixel coordinate.
+         */
+        function mapY(temp) {
+            const graphHeight = canvas.height - PADDING * 2;
+            const tempRange = Y_MAX - Y_MIN;
+            // Invert Y-axis (0 is top, canvas.height is bottom)
+            return canvas.height - PADDING - ((temp - Y_MIN) / tempRange) * graphHeight;
+        }
+
+        /**
+         * Draws the entire chart (axes, grid, data line, and warning zones).
+         */
+        function drawChart() {
+            // 1. Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 2. Draw Grid & Y-Axis Labels
+            ctx.strokeStyle = '#374151'; // gray-700
+            ctx.fillStyle = '#d1d5db'; // gray-300
+            ctx.font = "14px 'Fira Code', monospace";
+            ctx.lineWidth = 1;
+            
+            for (let temp = Y_MIN; temp <= Y_MAX; temp += 0.5) {
+                const y = mapY(temp);
+                
+                // Draw grid line
+                ctx.beginPath();
+                ctx.moveTo(PADDING, y);
+                ctx.lineTo(canvas.width - PADDING, y);
+                ctx.stroke();
+                
+                // Draw label (only for whole numbers)
+                if (temp % 1 === 0) {
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${temp.toFixed(1)}°C`, PADDING - 10, y + 5);
+                }
+            }
+            
+            // 3. NEW: Draw Evidence-Based Warning Temperature Zones
+            // Normal Range (up to 37.2°C) - Green
+            const y_normal_top = mapY(TEMP_THRESHOLDS.normal.max);
+            const y_normal_bottom = mapY(Y_MIN);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.12)'; // Green with transparency
+            ctx.fillRect(PADDING, y_normal_top, graphWidth, y_normal_bottom - y_normal_top);
+            
+            // Elevated/Caution Zone (37.2-38.0°C) - Amber
+            const y_elevated_top = mapY(TEMP_THRESHOLDS.elevated.max);
+            const y_elevated_bottom = mapY(TEMP_THRESHOLDS.normal.max);
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.15)'; // Amber with transparency
+            ctx.fillRect(PADDING, y_elevated_top, graphWidth, y_elevated_bottom - y_elevated_top);
+            
+            // Warning Zone (38.0-39.0°C) - Red
+            const y_warning_top = mapY(TEMP_THRESHOLDS.warning.max);
+            const y_warning_bottom = mapY(TEMP_THRESHOLDS.elevated.max);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'; // Red with transparency
+            ctx.fillRect(PADDING, y_warning_top, graphWidth, y_warning_bottom - y_warning_top);
+            
+            // Danger Zone (>39.0°C) - Dark Red
+            const y_danger_top = mapY(Y_MAX);
+            const y_danger_bottom = mapY(TEMP_THRESHOLDS.warning.max);
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.2)'; // Dark red with transparency
+            ctx.fillRect(PADDING, y_danger_top, graphWidth, y_danger_bottom - y_danger_top);
+            
+            // Draw zone labels
+            ctx.font = "11px 'Fira Code', monospace";
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillText('Normal', PADDING + 5, y_normal_top + 15);
+            ctx.fillText('Caution', PADDING + 5, y_elevated_top + 15);
+            ctx.fillText('Warning', PADDING + 5, y_warning_top + 15);
+            ctx.fillText('Danger', PADDING + 5, y_danger_top + 15);
+
+            // 4. Draw X-Axis (Time)
+            ctx.strokeStyle = '#4b5563'; // gray-600
+            ctx.beginPath();
+            const y_axis_base = mapY(Y_MIN);
+            ctx.moveTo(PADDING, y_axis_base);
+            ctx.lineTo(canvas.width - PADDING, y_axis_base);
+            ctx.stroke();
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#d1d5db'; // gray-300
+            ctx.fillText('Time (Live)', canvas.width / 2, canvas.height - PADDING / 2.5);
+            ctx.textAlign = 'right';
+            ctx.fillText('Now', canvas.width - PADDING, canvas.height - PADDING / 2.5);
+
+            // 5. Draw the Temperature Fill (Gradient Area)
+            const baseLineY = mapY(Y_MIN);
+            const fillGrad = ctx.createLinearGradient(0, mapY(Y_MAX), 0, baseLineY);
+            fillGrad.addColorStop(0, 'rgba(59, 130, 246, 0.4)'); // blue-500 @ 40%
+            fillGrad.addColorStop(1, 'rgba(59, 130, 246, 0.0)'); // blue-500 @ 0%
+
+            ctx.beginPath();
+            ctx.moveTo(PADDING, baseLineY);
+            for (let i = 0; i < dataPoints.length; i++) {
+                ctx.lineTo(PADDING + i, mapY(dataPoints[i]));
+            }
+            ctx.lineTo(PADDING + dataPoints.length - 1, baseLineY);
+            ctx.closePath();
+            ctx.fillStyle = fillGrad;
+            ctx.fill();
+
+            // 6. Draw the Temperature Line (Dynamic color based on temperature)
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 2;
+            
+            for (let i = 0; i < dataPoints.length; i++) {
+                if (i === 0) continue;
+                
+                const x1 = PADDING + i - 1;
+                const y1 = mapY(dataPoints[i - 1]);
+                const x2 = PADDING + i;
+                const y2 = mapY(dataPoints[i]);
+                
+                // Color based on temperature level
+                const temp = dataPoints[i];
+                const status = getWarningStatus(temp);
+                ctx.strokeStyle = status.color;
+                ctx.shadowColor = status.color + '80'; // Add transparency to shadow
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            ctx.shadowColor = 'transparent'; // Reset shadow
+
+            // 7. NEW: Draw Current Measurement Indicator (Dot)
+            if (dataPoints.length > 0) {
+                const currentX = PADDING + dataPoints.length - 1;
+                const currentY = mapY(currentCT);
+                const currentStatus = getWarningStatus(currentCT);
+                
+                // Outer glow
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 10, 0, 2 * Math.PI);
+                ctx.fillStyle = currentStatus.color + '40'; // Semi-transparent
+                ctx.fill();
+                
+                // Middle ring
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = currentStatus.color;
+                ctx.fill();
+                
+                // Inner white dot
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 3, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                // Pulsing effect (optional - adds shadow)
+                ctx.shadowColor = currentStatus.color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 6, 0, 2 * Math.PI);
+                ctx.strokeStyle = currentStatus.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.shadowColor = 'transparent';
+            }
+
+            // 8. Draw current value readout on chart
+            const currentStatus = getWarningStatus(currentCT);
+            ctx.fillStyle = currentStatus.color;
+            ctx.font = "bold 20px 'Lexend', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillText(`${currentCT.toFixed(2)} °C`, PADDING + 10, PADDING - 10);
+            
+            // Draw environmental info
+            ctx.font = "12px 'Fira Code', monospace";
+            ctx.fillStyle = '#9ca3af'; // gray-400
+            ctx.fillText(`Env: ${ambientTemp}°C, ${relativeHumidity}% RH`, PADDING + 10, PADDING + 10);
+        }
+
+        // --- VII. ANIMATION LOOP ---
+
+        /**
+         * The main loop, runs on every animation frame.
+         * Updates algorithm, redraws chart, and updates advisory panel.
+         */
+        function animationLoop() {
+            // 1. Update the algorithm state
+            runAlgorithmStep();
+            
+            // 2. Redraw the canvas
+            drawChart();
+            
+            // 3. Update the advisory panel with current warnings
+            updateAdvisoryPanel();
+            
+            // 4. Request the next frame
+            requestAnimationFrame(animationLoop);
+        }
+
+        // --- VIII. INITIALIZE ---
+        resetSimulation();
+        animationLoop();
+
+    </script>
+</body>
+</html>
+
+
+
+
+
