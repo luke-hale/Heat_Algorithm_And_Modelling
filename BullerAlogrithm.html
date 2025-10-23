@@ -254,10 +254,23 @@
                 <div class="space-y-2">
                     <div class="flex justify-between items-baseline">
                         <label for="speedSlider" class="text-base font-semibold text-gray-100">Simulation Speed</label>
-                        <span id="speedValue" class="text-base font-mono font-bold text-sky-400">10 Hz</span>
+                        <span id="speedValue" class="text-base font-mono font-bold text-sky-400">60 Hz</span>
                     </div>
-                    <input type="range" id="speedSlider" min="1" max="60" value="10" step="1" class="w-full">
-                    <p class="text-xs text-gray-400">Updates per second. Recommended: 10-30 Hz for smooth real-time simulation.</p>
+                    <input type="range" id="speedSlider" min="1" max="60" value="60" step="1" class="w-full">
+                    <p class="text-xs text-gray-400">Updates per second. Default: 60 Hz for smooth real-time simulation.</p>
+                </div>
+                
+                <!-- NEW: Environment Influence Control -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-baseline">
+                        <label for="envInfluenceSlider" class="text-base font-semibold text-gray-100">Environment Influence</label>
+                        <span id="envInfluenceValue" class="text-base font-mono font-bold text-sky-400">50%</span>
+                    </div>
+                    <input type="range" id="envInfluenceSlider" min="0" max="100" value="50" step="5" class="w-full">
+                    <p class="text-xs text-gray-400">
+                        <span class="text-amber-400">⚠️</span> Experimental: Controls how much environmental factors affect core temp. 
+                        No established evidence for combining Buller's HR-based model with environmental factors.
+                    </p>
                 </div>
 
                 <!-- Reset Button -->
@@ -297,13 +310,14 @@
         let age = 30;              // years
         
         // E. Simulation Timing Control
-        let updatesPerSecond = 10;  // Hz - how many times per second to update
+        let updatesPerSecond = 60;  // Hz - how many times per second to update (default 60 Hz)
         let lastUpdateTime = 0;     // Timestamp of last update
         let actualUpdateRate = 0;   // Measured update rate
         let updateCount = 0;        // Count of updates
         let lastUpdateRateCheck = 0; // Time of last rate calculation
         let simulationStartTime = 0; // When simulation started
         let elapsedSimulationTime = 0; // Total elapsed time in seconds
+        let environmentInfluence = 0.5; // 0-1 scale, controls environmental factor strength (default 50%)
         
         // F. FPS Tracking
         let fps = 0;
@@ -320,6 +334,8 @@
         const resetButton = document.getElementById('resetButton');
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
+        const envInfluenceSlider = document.getElementById('envInfluenceSlider');
+        const envInfluenceValue = document.getElementById('envInfluenceValue');
         const fpsDisplay = document.getElementById('fpsDisplay');
         const updateDisplay = document.getElementById('updateDisplay');
         const envStressDisplay = document.getElementById('envStressDisplay');
@@ -432,7 +448,17 @@
          * EVIDENCE-BASED: Calculate comprehensive environmental heat stress
          * Combines multiple factors: Heat Index, wind, solar radiation, clothing
          * 
-         * Research basis:
+         * ⚠️ IMPORTANT CAVEAT:
+         * There is NO established evidence-based method for combining Buller's 
+         * HR-based ECTemp algorithm with environmental models (WBGT, Heat Index, etc.).
+         * These are separate prediction methods developed independently.
+         * 
+         * This implementation is EXPERIMENTAL - we're creating a hybrid approach
+         * where environmental factors modify the HR-based core temp prediction.
+         * The "Environment Influence" slider (0-100%) allows exploration of different
+         * coupling strengths since the "correct" value is unknown.
+         * 
+         * Research basis for individual components:
          * - Heat Index: Temperature + humidity (evaporative cooling impairment)
          * - Wind speed: Enhances convective cooling (ISO 7243, ISO 7933)
          * - Solar radiation: Adds radiant heat load (WBGT model)
@@ -632,6 +658,12 @@
             speedValue.textContent = `${updatesPerSecond} Hz`;
         });
         
+        // NEW: Environment influence control
+        envInfluenceSlider.addEventListener('input', (e) => {
+            environmentInfluence = parseFloat(e.target.value) / 100; // Convert to 0-1 scale
+            envInfluenceValue.textContent = `${e.target.value}%`;
+        });
+        
         resetButton.addEventListener('click', resetSimulation);
 
         // --- V. CORE ALGORITHM LOGIC ---
@@ -693,7 +725,8 @@
                     // Environmental stress affects core temp during activity
                     // Higher activity = more metabolic heat + stronger environmental influence
                     // envStress already scaled in calculateEnvironmentalStress()
-                    const heatIncrement = envStress * activityIntensity;
+                    // APPLY ENVIRONMENT INFLUENCE MULTIPLIER (0-100% user control)
+                    const heatIncrement = envStress * activityIntensity * environmentInfluence;
                     currentCT += heatIncrement;
                 }
             }

@@ -73,7 +73,25 @@ Activity_HR = ((METs + 5) / 6) × Resting_HR
 
 ### 3. Comprehensive Environmental Heat Stress Model (Extension)
 
-**IMPORTANT NOTE:** Buller's original ECTemp algorithm does NOT include environmental factors. This is an evidence-based extension incorporating multiple validated thermal stress models.
+**⚠️ CRITICAL LIMITATIONS:**
+
+1. **Buller's original ECTemp algorithm does NOT include environmental factors** - it predicts core temperature solely from heart rate data.
+
+2. **NO ESTABLISHED EVIDENCE exists for combining these models.** Buller's HR-based algorithm and environmental models (WBGT, Heat Index, ISO standards) were developed independently and have not been validated in combination.
+
+3. **This is an EXPERIMENTAL HYBRID approach.** We are combining:
+   - Buller's Kalman filter (HR → Core Temp)
+   - Environmental heat stress factors (modifying the prediction)
+
+4. **The "Environment Influence" slider (0-100%) is provided because the correct coupling strength is unknown.** Users can:
+   - Set to 0%: Pure Buller algorithm (HR-based only)
+   - Set to 50%: Moderate environmental influence (default)
+   - Set to 100%: Maximum environmental influence
+   - Experiment to match real-world observations
+
+5. **Each environmental component IS evidence-based** (Heat Index, WBGT, ISO standards), but their integration with Buller's algorithm is not validated.
+
+**Why this matters:** This tool demonstrates what COULD happen if environmental factors affect someone already under physiological stress (elevated HR). It's for research and exploration, not clinical diagnosis.
 
 #### 3.1 Heat Index Calculation (Temperature + Humidity)
 
@@ -168,7 +186,30 @@ effectiveTemp += clothingEffect
 **Physiological Effect:**
 Higher clothing insulation impedes heat dissipation through reduced evaporative and convective cooling, increasing thermal strain.
 
-#### 3.5 Combined Environmental Stress Application
+#### 3.5 Environment Influence Control (NEW)
+
+**User-Adjustable Parameter:** 0-100% slider
+
+**Purpose:** Since there's no evidence for how strongly environmental factors should modify Buller's HR-based prediction, this slider lets users control the coupling strength.
+
+**Implementation:**
+```javascript
+// environmentInfluence ranges from 0.0 to 1.0 (0% to 100%)
+heatIncrement = envStress × activityIntensity × environmentInfluence
+currentCT += heatIncrement
+```
+
+**Usage Guidelines:**
+- **0%:** Pure Buller algorithm - environment has NO effect (original algorithm)
+- **25%:** Weak environmental influence - subtle effects
+- **50%:** Moderate influence (default) - balanced hybrid model
+- **75%:** Strong environmental influence - pronounced effects
+- **100%:** Maximum influence - environmental factors dominate
+
+**Practical Application:**
+If you have real-world data (e.g., measured core temps under known conditions), you can calibrate this slider to match observations. This acknowledges the uncertainty in combining these models.
+
+#### 3.6 Combined Environmental Stress Application
 
 **Complete Model:**
 ```javascript
@@ -189,10 +230,10 @@ effectiveTemp += clothingEffect(clothing)
 // 5. Calculate net heat stress
 heatStressDelta = effectiveTemp - ambientTemp
 
-// 6. Apply during activity only
+// 6. Apply during activity only, with user-controlled influence
 if (HR > RestingHR) {
     activityIntensity = (HR - RestingHR) / (MaxHR - RestingHR)
-    heatIncrement = heatStressDelta × activityIntensity × 0.001
+    heatIncrement = heatStressDelta × activityIntensity × environmentInfluence
     currentCT += heatIncrement
 }
 ```
@@ -201,7 +242,8 @@ if (HR > RestingHR) {
 - **Additive model:** All factors combine to create effective temperature
 - **Activity-dependent:** Only affects core temp during physical work
 - **Bidirectional:** Can increase OR decrease thermal strain
-- **Evidence-based:** Each component based on validated standards
+- **User-calibratable:** Environment Influence slider acknowledges model uncertainty
+- **Evidence-based components:** Each environmental factor from validated standards
 
 **Example Scenarios:**
 
@@ -364,11 +406,27 @@ elapsedSimulationTime += (1 / updatesPerSecond)
 
 ## Limitations & Disclaimers
 
-1. **Educational Tool:** This is a demonstration/research tool, not a medical device
-2. **Environmental Model:** Extension beyond Buller's original algorithm (clearly documented)
-3. **Individual Variation:** Default parameters may not fit all individuals
-4. **Simplified Physics:** Some environmental factors (wind speed, solar radiation, clothing) not included
-5. **Not FDA Approved:** Not for clinical diagnosis or treatment decisions
+1. **Educational/Research Tool:** This is a demonstration and research exploration tool, NOT a medical device
+
+2. **EXPERIMENTAL HYBRID MODEL:** The combination of Buller's HR-based algorithm with environmental factors has NO established scientific validation. This is an experimental approach to explore potential interactions.
+
+3. **No Clinical Use:** Not FDA approved. Not for clinical diagnosis, treatment decisions, or occupational health compliance.
+
+4. **Model Uncertainty:** The "Environment Influence" slider (0-100%) exists precisely because we don't know the "correct" coupling strength between physiological and environmental models. This is honest acknowledgment of uncertainty.
+
+5. **Individual Variation:** Default parameters may not fit all individuals. Age, fitness, acclimatization, health status, and medications all affect responses.
+
+6. **Calibration Needed:** If using for research, calibrate the environment influence parameter against real-world measurements for your specific population and conditions.
+
+7. **Simplified Assumptions:** 
+   - Assumes steady-state clothing and activity
+   - Doesn't model transient heat storage
+   - Ignores some factors (air velocity around body, radiant asymmetry, clothing moisture)
+
+8. **Validation Status:**
+   - ✅ Buller's algorithm: Validated (±0.3°C accuracy)
+   - ✅ Individual environmental components: Validated (ISO standards, NOAA)
+   - ❌ Combined model: NOT validated
 
 ## License & Attribution
 
