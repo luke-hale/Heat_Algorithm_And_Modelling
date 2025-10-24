@@ -258,7 +258,7 @@
                 <h2 class="text-2xl font-black text-white mb-6 tracking-tight">HEAT TRANSFER MODEL</h2>
                 <div class="relative w-full bg-gray-900 rounded-2xl overflow-hidden border border-gray-800" style="height: 320px;">
                     <!-- Layers -->
-                    <div class="absolute left-0 w-1/4 h-full bg-gradient-to-r from-orange-600 to-orange-500 flex flex-col items-center justify-center">
+                    <div class="absolute left-0 w-1/4 h-full bg-gradient-to-r from-orange-600 to-orange-500 flex flex-col items-center justify-center" style="z-index: 1;">
                         <span class="text-xs font-black text-white opacity-80 tracking-wider mb-2">SKIN</span>
                         <span id="temp-skin" class="text-lg font-bold text-white">35.0°C</span>
                     </div>
@@ -278,22 +278,22 @@
                     </div>
 
                     <!-- Heat Loss Arrows (NO HEADS, JUST LINES) -->
-                    <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 400 100" preserveAspectRatio="none">
-                        <!-- Q_dry: Dry Heat (Dashed Line) -->
-                        <line id="dry-arrow" class="dry-arrow" x1="10" y1="30" x2="390" y2="30" stroke="#FF6B35" stroke-width="3" opacity="0.9" stroke-linecap="round" />
+                    <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 400 100" preserveAspectRatio="none" style="z-index: 0;">
+                        <!-- Q_dry: Dry Heat (Dashed Line) - starts at edge of skin -->
+                        <line id="dry-arrow" class="dry-arrow" x1="100" y1="30" x2="390" y2="30" stroke="#FF6B35" stroke-width="3" opacity="0.9" stroke-linecap="round" />
                         
-                        <!-- Q_evap: Evaporative Heat (Wavy Dashed Line) -->
-                        <path id="evap-arrow-path" class="evap-arrow" d="M 10 70 Q 60 62, 110 70 T 210 70 T 310 70 L 390 70" stroke="#FFFF00" stroke-width="3" opacity="0.9" fill="none" stroke-linecap="round" />
+                        <!-- Q_evap: Evaporative Heat (Wavy Dashed Line) - starts at edge of skin, light blue -->
+                        <path id="evap-arrow-path" class="evap-arrow" d="M 100 70 Q 150 62, 200 70 T 300 70 L 390 70" stroke="#60A5FA" stroke-width="3" opacity="0.9" fill="none" stroke-linecap="round" />
                     </svg>
                     
                     <!-- Labels for arrows -->
-                    <div class="absolute top-4 left-4 flex flex-col gap-2">
+                    <div class="absolute top-4 left-4 flex flex-col gap-2" style="z-index: 2;">
                         <div class="flex items-center gap-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
-                            <div class="w-6 h-0.5 bg-gradient-to-r from-orange-500 to-yellow-500"></div>
+                            <div class="w-6 h-0.5 bg-gradient-to-r from-orange-500 to-orange-400"></div>
                             <span class="text-xs font-bold text-white">DRY HEAT</span>
                         </div>
                         <div class="flex items-center gap-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
-                            <div class="w-6 h-0.5 bg-yellow-400"></div>
+                            <div class="w-6 h-0.5 bg-blue-400"></div>
                             <span class="text-xs font-bold text-white">EVAPORATIVE</span>
                         </div>
                     </div>
@@ -375,10 +375,10 @@
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Evaporative</span>
-                            <span id="evap-output" class="text-lg font-black text-yellow-400">-- W/m²</span>
+                            <span id="evap-output" class="text-lg font-black text-blue-400">-- W/m²</span>
                         </div>
                         <div class="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
-                            <div id="evap-bar" class="bg-gradient-to-r from-yellow-600 to-yellow-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            <div id="evap-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
                         </div>
                     </div>
                     
