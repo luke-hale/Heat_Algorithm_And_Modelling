@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabric Performance Lab</title>
+    <!-- Load Tailwind CSS --> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for temperature profile -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Nike-inspired fonts: Futura-like system fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            letter-spacing: -0.02em;
+        }
+        
+        /* Nike-inspired bold headers */
+        h1, h2, h3 {
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+        
+        /* Smooth continuous flow animations */
+        @keyframes flowDry {
+            0% {
+                stroke-dashoffset: 0;
+            }
+            100% {
+                stroke-dashoffset: 20;
+            }
+        }
+        
+        @keyframes flowEvap {
+            0% {
+                stroke-dashoffset: 0;
+            }
+            100% {
+                stroke-dashoffset: 20;
+            }
+        }
+        
+        .dry-arrow {
+            stroke-dasharray: 10 10;
+            animation: flowDry 2s linear infinite;
+        }
+        
+        .evap-arrow {
+            stroke-dasharray: 10 10;
+            animation: flowEvap 2s linear infinite;
+        }
+        
+        /* Custom range slider - Nike style */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+            background: #2a2a2a;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.15s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        input[type="range"]::-moz-range-track {
+            background: #2a2a2a;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* Performance card glow */
+        .performance-glow {
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Nike-style accent */
+        .accent-orange {
+            color: #FF6B35;
+        }
+        
+        .bg-accent-orange {
+            background-color: #FF6B35;
+        }
+        
+        /* Smooth transitions */
+        * {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-8">
+
+    <div class="w-full max-w-7xl">
+        <!-- Hero Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-6xl font-black gradient-text mb-4 tracking-tight">
+                FABRIC PERFORMANCE LAB
+            </h1>
+            <p class="text-xl text-gray-400 font-light tracking-wide">
+                Advanced thermal modeling for athletic performance
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Column 1: Inputs -->
+            <div class="lg:col-span-3 space-y-6 p-8 bg-black performance-glow rounded-3xl border border-gray-800">
+                <h2 class="text-2xl font-black text-white mb-6 tracking-tight">PARAMETERS</h2>
+
+                <!-- Activity Level (NEW) -->
+                <div>
+                    <label for="activity" class="block text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">Activity Level</label>
+                    <select id="activity" class="w-full p-3 bg-gray-900 text-white border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium">
+                        <option value="resting">Resting (58 W/m²)</option>
+                        <option value="light" selected>Light Activity (116 W/m²)</option>
+                        <option value="moderate">Moderate Exercise (175 W/m²)</option>
+                        <option value="intense">Intense Exercise (290 W/m²)</option>
+                    </select>
+                </div>
+
+                <!-- Fabric Selection -->
+                <div>
+                    <label for="fabric" class="block text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">Fabric Type</label>
+                    <select id="fabric" class="w-full p-3 bg-gray-900 text-white border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium">
+                        <option value="polyester">Polyester (Athletic)</option>
+                        <option value="cotton">Cotton (T-Shirt)</option>
+                        <option value="wool">Wool (Merino)</option>
+                        <option value="nylon">Nylon (Lightweight)</option>
+                        <option value="none">No Clothing (Control)</option>
+                    </select>
+                </div>
+
+                <!-- Ambient Temperature -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <label for="temp" class="text-xs font-bold text-gray-400 uppercase tracking-wider">Temperature</label>
+                        <span id="temp-label" class="text-lg font-black text-white">20°C</span>
+                    </div>
+                    <input type="range" id="temp" min="5" max="40" value="20" class="w-full cursor-pointer">
+                </div>
+
+                <!-- Ambient Humidity -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <label for="humidity" class="text-xs font-bold text-gray-400 uppercase tracking-wider">Humidity</label>
+                        <span id="humidity-label" class="text-lg font-black text-white">50%</span>
+                    </div>
+                    <input type="range" id="humidity" min="10" max="95" value="50" class="w-full cursor-pointer">
+                </div>
+
+                <!-- Wind Speed -->
+                <div>
+                    <label for="wind" class="block text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">Airflow</label>
+                    <select id="wind" class="w-full p-3 bg-gray-900 text-white border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium">
+                        <option value="still">Still Air (Indoors)</option>
+                        <option value="breeze">Light Breeze (Walking)</option>
+                        <option value="windy">Windy (Running/Cycling)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Column 2: 1D Model Visualization -->
+            <div class="lg:col-span-5 p-8 bg-black performance-glow rounded-3xl border border-gray-800">
+                <h2 class="text-2xl font-black text-white mb-6 tracking-tight">HEAT TRANSFER MODEL</h2>
+                <div class="relative w-full bg-gray-900 rounded-2xl overflow-hidden border border-gray-800" style="height: 320px;">
+                    <!-- Layers -->
+                    <div class="absolute left-0 w-1/4 h-full bg-gradient-to-r from-orange-600 to-orange-500 flex flex-col items-center justify-center">
+                        <span class="text-xs font-black text-white opacity-80 tracking-wider mb-2">SKIN</span>
+                        <span id="temp-skin" class="text-lg font-bold text-white">35.0°C</span>
+                    </div>
+                    <div class="absolute left-1/4 w-1/4 h-full bg-gradient-to-r from-purple-900 to-purple-800 flex flex-col items-center justify-center border-l border-r border-gray-700">
+                        <span class="text-xs font-black text-purple-200 opacity-90 tracking-wider mb-2">AIR GAP</span>
+                        <span id="temp-airgap" class="text-lg font-bold text-white">--°C</span>
+                    </div>
+                    <div id="vis-fabric-box" class="absolute left-1/2 w-1/4 h-full bg-gradient-to-r from-pink-900 to-pink-800 flex flex-col items-center justify-center border-r border-gray-700">
+                        <span id="vis-fabric-label" class="text-xs font-black text-pink-200 opacity-90 tracking-wider mb-2">FABRIC</span>
+                        <span id="temp-fabric" class="text-lg font-bold text-white">--°C</span>
+                    </div>
+                    <div class="absolute left-3/4 w-1/4 h-full bg-gradient-to-r from-gray-800 to-gray-900 flex flex-col items-center justify-center">
+                        <span class="text-xs font-black text-gray-400 opacity-90 tracking-wider mb-2">AIR</span>
+                        <span id="temp-env" class="text-lg font-bold text-white">--°C</span>
+                    </div>
+
+                    <!-- Heat Loss Arrows (NO HEADS, JUST LINES) -->
+                    <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 400 100" preserveAspectRatio="none">
+                        <!-- Q_dry: Dry Heat (Dashed Line) -->
+                        <line id="dry-arrow" class="dry-arrow" x1="10" y1="30" x2="390" y2="30" stroke="#FF6B35" stroke-width="3" opacity="0.9" stroke-linecap="round" />
+                        
+                        <!-- Q_evap: Evaporative Heat (Wavy Dashed Line) -->
+                        <path id="evap-arrow-path" class="evap-arrow" d="M 10 70 Q 60 62, 110 70 T 210 70 T 310 70 L 390 70" stroke="#FFFF00" stroke-width="3" opacity="0.9" fill="none" stroke-linecap="round" />
+                    </svg>
+                    
+                    <!-- Labels for arrows -->
+                    <div class="absolute top-4 left-4 flex flex-col gap-2">
+                        <div class="flex items-center gap-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
+                            <div class="w-6 h-0.5 bg-gradient-to-r from-orange-500 to-yellow-500"></div>
+                            <span class="text-xs font-bold text-white">DRY HEAT</span>
+                        </div>
+                        <div class="flex items-center gap-2 bg-black bg-opacity-70 px-3 py-1.5 rounded-full">
+                            <div class="w-6 h-0.5 bg-yellow-400"></div>
+                            <span class="text-xs font-bold text-white">EVAPORATIVE</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Temperature Profile Chart -->
+                <div class="mt-6" style="height: 200px;">
+                    <h3 class="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Temperature Profile</h3>
+                    <div style="height: 160px;">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 3: Outputs -->
+            <div class="lg:col-span-4 p-8 bg-black performance-glow rounded-3xl border border-gray-800 space-y-6">
+                <h2 class="text-2xl font-black text-white mb-6 tracking-tight">PERFORMANCE</h2>
+                
+                <!-- Total Heat Loss -->
+                <div class="p-6 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-gray-700">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Total Heat Loss</p>
+                    <p id="total-output" class="text-5xl font-black text-white mb-3">-- W/m²</p>
+                    <div id="comfort-msg" class="text-sm text-gray-300 leading-relaxed min-h-[40px]">--</div>
+                </div>
+                
+                <!-- PMV Score (NEW) -->
+                <div class="p-6 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-gray-700">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Thermal Sensation (PMV)</p>
+                    <div class="flex items-center gap-4">
+                        <p id="pmv-output" class="text-4xl font-black text-white">--</p>
+                        <div id="pmv-label" class="text-sm font-bold text-gray-400">--</div>
+                    </div>
+                    <div class="mt-3 h-2 bg-gray-800 rounded-full overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400"></div>
+                        <div id="pmv-bar" class="absolute h-full bg-white rounded-full shadow-lg transition-all duration-500" style="width: 8px; left: 50%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Cold</span>
+                        <span>Neutral</span>
+                        <span>Hot</span>
+                    </div>
+                </div>
+                
+                <!-- Heat Loss Breakdown -->
+                <div class="space-y-4">
+                    <!-- Dry Heat Loss -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Dry Heat</span>
+                            <span id="dry-output" class="text-lg font-black text-orange-400">-- W/m²</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                            <div id="dry-bar" class="bg-gradient-to-r from-orange-600 to-orange-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Evaporative Heat Loss -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Evaporative</span>
+                            <span id="evap-output" class="text-lg font-black text-yellow-400">-- W/m²</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                            <div id="evap-bar" class="bg-gradient-to-r from-yellow-600 to-yellow-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Radiation Heat Loss (NEW) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Radiation</span>
+                            <span id="rad-output" class="text-lg font-black text-pink-400">-- W/m²</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                            <div id="rad-bar" class="bg-gradient-to-r from-pink-600 to-pink-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- References Section -->
+        <div class="mt-8">
+            <details class="bg-black performance-glow rounded-3xl border border-gray-800 p-8">
+                <summary class="text-xl font-black text-white cursor-pointer uppercase tracking-tight">Scientific Foundation</summary>
+                <ul class="list-none pl-0 mt-6 space-y-4 text-sm text-gray-300">
+                    <li class="pl-4 border-l-2 border-orange-500">
+                        <strong class="text-white">ISO 11092:2014:</strong> International standard defining thermal resistance (R<sub>ct</sub>) and evaporative resistance (R<sub>et</sub>) for textiles.
+                    </li>
+                    <li class="pl-4 border-l-2 border-orange-500">
+                        <strong class="text-white">Fanger, P. O. (1970):</strong> <em>Thermal Comfort: Analysis and Applications.</em> Foundational PMV/PPD model for thermal sensation prediction.
+                    </li>
+                    <li class="pl-4 border-l-2 border-orange-500">
+                        <strong class="text-white">ASHRAE 55-2020:</strong> Thermal environmental conditions for human occupancy. Standard metabolic rates and comfort zones.
+                    </li>
+                    <li class="pl-4 border-l-2 border-orange-500">
+                        <strong class="text-white">Li, Y. (2012):</strong> "The science of clothing comfort." Comprehensive review of heat and moisture transfer through textiles.
+                    </li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. GET UI ELEMENTS ---
+        const fabricSelect = document.getElementById('fabric');
+        const tempSlider = document.getElementById('temp');
+        const humiditySlider = document.getElementById('humidity');
+        const windSelect = document.getElementById('wind');
+        const activitySelect = document.getElementById('activity');
+        
+        const tempLabel = document.getElementById('temp-label');
+        const humidityLabel = document.getElementById('humidity-label');
+        
+        const totalOutput = document.getElementById('total-output');
+        const dryOutput = document.getElementById('dry-output');
+        const evapOutput = document.getElementById('evap-output');
+        const radOutput = document.getElementById('rad-output');
+        const pmvOutput = document.getElementById('pmv-output');
+        const pmvLabel = document.getElementById('pmv-label');
+        const comfortMsg = document.getElementById('comfort-msg');
+        
+        const dryBar = document.getElementById('dry-bar');
+        const evapBar = document.getElementById('evap-bar');
+        const radBar = document.getElementById('rad-bar');
+        const pmvBar = document.getElementById('pmv-bar');
+
+        // Visualization Elements
+        const visFabricLabel = document.getElementById('vis-fabric-label');
+        const visFabricBox = document.getElementById('vis-fabric-box');
+        const dryArrow = document.getElementById('dry-arrow');
+        const evapArrow = document.getElementById('evap-arrow-path');
+        
+        // Temperature display elements
+        const tempSkin = document.getElementById('temp-skin');
+        const tempAirgap = document.getElementById('temp-airgap');
+        const tempFabric = document.getElementById('temp-fabric');
+        const tempEnv = document.getElementById('temp-env');
+
+
+        // --- 2. DEFINE PHYSICAL CONSTANTS & DATA ---
+
+        // Activity levels (metabolic rates in W/m²) - ASHRAE Standard
+        const activityData = {
+            'resting':  { M: 58,  name: 'Resting' },
+            'light':    { M: 116, name: 'Light Activity' },
+            'moderate': { M: 175, name: 'Moderate Exercise' },
+            'intense':  { M: 290, name: 'Intense Exercise' }
+        };
+
+        // Fabric properties - ISO 11092
+        // Rct = Thermal Resistance (m²·K/W)
+        // Ret = Evaporative Resistance (m²·Pa/W)
+        // moistureFactor = multiplier for Ret when fabric is wet (moisture-dependent)
+        const fabricData = {
+            'polyester': { 
+                Rct: 0.025, 
+                Ret: 12, 
+                moistureFactor: 1.2,  // Polyester doesn't absorb much
+                name: 'Polyester (Athletic)'
+            },
+            'cotton': { 
+                Rct: 0.040, 
+                Ret: 35, 
+                moistureFactor: 3.5,  // Cotton gets terrible when wet
+                name: 'Cotton (T-Shirt)'
+            },
+            'wool': { 
+                Rct: 0.080, 
+                Ret: 20, 
+                moistureFactor: 1.5,  // Wool manages moisture well
+                name: 'Wool (Merino)'
+            },
+            'nylon': { 
+                Rct: 0.030, 
+                Ret: 18, 
+                moistureFactor: 1.3,
+                name: 'Nylon (Lightweight)'
+            },
+            'none': { 
+                Rct: 0.0, 
+                Ret: 0.0, 
+                moistureFactor: 1.0,
+                name: 'No Clothing (Control)'
+            }
+        };
+
+        // Boundary layer resistance (wind-dependent)
+        const boundaryLayerData = {
+            'still':   { Rct: 0.09, Ret: 22, h_c: 3.0 },  // h_c = convective heat transfer coeff
+            'breeze':  { Rct: 0.04, Ret: 10, h_c: 6.0 },
+            'windy':   { Rct: 0.02, Ret: 5,  h_c: 12.0 }
+        };
+
+        // Air gap resistance (between skin and fabric)
+        const airGap = { Rct: 0.08, Ret: 18 };
+
+        // Physiological Constants
+        const T_SKIN = 35.0;  // Skin temperature (°C)
+        const RH_SKIN = 0.95; // Skin relative humidity when sweating
+        const EMISSIVITY_SKIN = 0.95; // Skin emissivity for radiation
+        const STEFAN_BOLTZMANN = 5.67e-8; // Stefan-Boltzmann constant (W/m²·K⁴)
+        const LATENT_HEAT_VAPORIZATION = 2430000; // J/kg (heat absorbed when sweat evaporates)
+
+        // --- 3. HELPER FUNCTIONS ---
+
+        /**
+         * Saturation vapor pressure (Tetens equation)
+         */
+        function getSatVaporPressure(T_celsius) {
+            return 610.78 * Math.exp((17.27 * T_celsius) / (T_celsius + 237.3));
+        }
+
+        /**
+         * Calculate PMV (Predicted Mean Vote) - simplified Fanger model
+         * PMV ranges from -3 (cold) to +3 (hot), 0 is neutral
+         */
+        function calculatePMV(M, Q_total, T_air, RH_air) {
+            // Simplified PMV calculation
+            // Expected heat loss at thermal neutrality ≈ metabolic rate - basal metabolism
+            const Q_neutral = M - 58; // Metabolic heat that needs to be dissipated
+            
+            // Heat balance: 
+            // If Q_total < Q_neutral → not losing enough heat → too hot → positive PMV
+            // If Q_total > Q_neutral → losing too much heat → too cold → negative PMV
+            const heatBalance = Q_neutral - Q_total;
+            
+            // Convert to PMV scale (-3 to +3)
+            // Empirical scaling factor adjusted for proper range
+            let pmv = heatBalance / 60.0;
+            
+            // Add temperature influence
+            const tempFactor = (T_air - 24) * 0.15;
+            pmv += tempFactor;
+            
+            // Clamp to range
+            pmv = Math.max(-3, Math.min(3, pmv));
+            
+            return pmv;
+        }
+
+        /**
+         * Get PMV sensation label
+         */
+        function getPMVLabel(pmv) {
+            if (pmv < -2.5) return 'COLD';
+            if (pmv < -1.5) return 'COOL';
+            if (pmv < -0.5) return 'SLIGHTLY COOL';
+            if (pmv < 0.5) return 'NEUTRAL';
+            if (pmv < 1.5) return 'SLIGHTLY WARM';
+            if (pmv < 2.5) return 'WARM';
+            return 'HOT';
+        }
+        
+        /**
+         * Initialize temperature profile chart
+         */
+        let tempChart = null;
+        function initChart() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            
+            // Create gradient for thermal imaging effect
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, '#FF6B35');    // Orange (hot)
+            gradient.addColorStop(0.5, '#EC4899');  // Pink (medium)
+            gradient.addColorStop(1, '#9333EA');    // Purple (cool)
+            
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Skin', 'Air Gap', 'Fabric', 'Environment'],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [35, 30, 25, 20],
+                        borderColor: gradient,
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        borderWidth: 4,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#FF6B35',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 15,
+                            max: 40,
+                            grid: { color: '#2a2a2a' },
+                            ticks: { color: '#888', font: { size: 11, weight: 'bold' } }
+                        },
+                        x: {
+                            grid: { color: '#2a2a2a' },
+                            ticks: { color: '#888', font: { size: 11, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 4. CORE CALCULATION FUNCTION ---
+
+        function calculateComfort() {
+            // Get all current input values
+            const fabricID = fabricSelect.value;
+            const T_air = parseFloat(tempSlider.value);
+            const RH_air = parseFloat(humiditySlider.value) / 100.0;
+            const windID = windSelect.value;
+            const activityID = activitySelect.value;
+
+            // Update labels
+            tempLabel.textContent = `${T_air.toFixed(0)}°C`;
+            humidityLabel.textContent = `${(RH_air * 100).toFixed(0)}%`;
+
+            // Get properties
+            const fabric = fabricData[fabricID];
+            const boundary = boundaryLayerData[windID];
+            const activity = activityData[activityID];
+            const M = activity.M; // Metabolic rate
+
+            // Handle "No Clothing" case
+            let currentAirGap = airGap;
+            if (fabricID === 'none') {
+                currentAirGap = { Rct: 0.0, Ret: 0.0 };
+            }
+
+            // Moisture-dependent fabric properties
+            // Estimate moisture level based on evaporative demand
+            const P_skin = getSatVaporPressure(T_SKIN) * RH_SKIN;
+            const P_air = getSatVaporPressure(T_air) * RH_air;
+            const moistureDemand = Math.max(0, P_skin - P_air);
+            const moistureLevel = Math.min(1, moistureDemand / 3000); // 0-1 scale
+            
+            // Apply moisture factor to evaporative resistance
+            const fabric_Ret_adjusted = fabric.Ret * (1 + (fabric.moistureFactor - 1) * moistureLevel);
+
+            // --- A. DRY HEAT LOSS (Convection + Conduction) ---
+            const R_total_dry = currentAirGap.Rct + fabric.Rct + boundary.Rct;
+            const delta_T = T_SKIN - T_air;
+            const Q_dry = Math.max(0, delta_T / R_total_dry);
+
+            // --- B. RADIATION HEAT LOSS (NEW) ---
+            // Q_rad = ε * σ * (T_skin⁴ - T_air⁴)
+            // Simplified using linearized form for small temp differences
+            const T_skin_K = T_SKIN + 273.15;
+            const T_air_K = T_air + 273.15;
+            const Q_rad = EMISSIVITY_SKIN * STEFAN_BOLTZMANN * 
+                         (Math.pow(T_skin_K, 4) - Math.pow(T_air_K, 4));
+
+            // --- C. EVAPORATIVE HEAT LOSS ---
+            const R_total_evap = currentAirGap.Ret + fabric_Ret_adjusted + boundary.Ret;
+            const delta_P = P_skin - P_air;
+            const Q_evap = Math.max(0, delta_P / R_total_evap);
+
+            // --- D. TOTAL HEAT LOSS ---
+            const Q_total = Q_dry + Q_rad + Q_evap;
+
+            // --- E. CALCULATE PMV (Thermal Sensation) ---
+            const pmv = calculatePMV(M, Q_total, T_air, RH_air);
+            const pmvLabelText = getPMVLabel(pmv);
+
+            // --- F. CALCULATE TEMPERATURE PROFILE ---
+            // Calculate intermediate temperatures at each layer
+            const T_airgap_outer = T_SKIN - Q_dry * currentAirGap.Rct;
+            const T_fabric_outer = T_airgap_outer - Q_dry * fabric.Rct;
+            
+            // --- G. UPDATE UI OUTPUTS ---
+            
+            totalOutput.textContent = `${Q_total.toFixed(0)} W/m²`;
+            dryOutput.textContent = `${Q_dry.toFixed(0)} W/m²`;
+            evapOutput.textContent = `${Q_evap.toFixed(0)} W/m²`;
+            radOutput.textContent = `${Q_rad.toFixed(0)} W/m²`;
+            pmvOutput.textContent = pmv.toFixed(1);
+            pmvLabel.textContent = pmvLabelText;
+            
+            // Update bars (scale to max 400 W/m²)
+            const maxBar = 400;
+            dryBar.style.width = `${Math.min(100, (Q_dry / maxBar) * 100)}%`;
+            evapBar.style.width = `${Math.min(100, (Q_evap / maxBar) * 100)}%`;
+            radBar.style.width = `${Math.min(100, (Q_rad / maxBar) * 100)}%`;
+            
+            // PMV bar position (-3 to +3 → 0% to 100%)
+            const pmvPosition = ((pmv + 3) / 6) * 100;
+            pmvBar.style.left = `${pmvPosition}%`;
+
+            // Comfort message based on PMV
+            let msg = '';
+            if (pmv < -2) {
+                msg = "Too cold. Risk of hypothermia in prolonged exposure.";
+            } else if (pmv < -1) {
+                msg = "Cool conditions. May feel uncomfortable during rest.";
+            } else if (pmv < -0.5) {
+                msg = "Slightly cool. Generally acceptable for most activities.";
+            } else if (pmv < 0.5) {
+                msg = "Optimal thermal comfort. Ideal performance conditions.";
+            } else if (pmv < 1) {
+                msg = "Slightly warm. Good for high-intensity exercise.";
+            } else if (pmv < 2) {
+                msg = "Warm conditions. Increased sweating, moderate discomfort.";
+            } else {
+                msg = "Too hot. High risk of heat stress and reduced performance.";
+            }
+            comfortMsg.textContent = msg;
+
+            // --- H. UPDATE VISUALIZATION ---
+            
+            // Update fabric label
+            visFabricLabel.textContent = fabric.name.toUpperCase();
+            visFabricBox.style.display = (fabricID === 'none') ? 'none' : 'flex';
+            
+            // Update temperature displays
+            tempSkin.textContent = `${T_SKIN.toFixed(1)}°C`;
+            tempAirgap.textContent = `${T_airgap_outer.toFixed(1)}°C`;
+            tempFabric.textContent = fabricID === 'none' ? '--' : `${T_fabric_outer.toFixed(1)}°C`;
+            tempEnv.textContent = `${T_air.toFixed(1)}°C`;
+            
+            // Update arrow visualizations (based on heat flow magnitude)
+            const maxVisHeat = 300;
+            const dryScale = Math.min(1, Math.max(0.3, Q_dry / maxVisHeat));
+            const evapScale = Math.min(1, Math.max(0.3, Q_evap / maxVisHeat));
+
+            // Set stroke width (2 to 7)
+            dryArrow.setAttribute('stroke-width', (2 + dryScale * 5).toFixed(1));
+            evapArrow.setAttribute('stroke-width', (2 + evapScale * 5).toFixed(1));
+
+            // Set opacity (0.4 to 1)
+            const dryOpacity = (0.4 + dryScale * 0.6).toFixed(2);
+            const evapOpacity = (0.4 + evapScale * 0.6).toFixed(2);
+            
+            dryArrow.setAttribute('opacity', dryOpacity);
+            evapArrow.setAttribute('opacity', evapOpacity);
+
+            // --- I. UPDATE TEMPERATURE CHART ---
+            if (tempChart) {
+                const chartData = fabricID === 'none' 
+                    ? [T_SKIN, T_air, T_air, T_air]
+                    : [T_SKIN, T_airgap_outer, T_fabric_outer, T_air];
+                    
+                tempChart.data.datasets[0].data = chartData;
+                tempChart.update('none'); // No animation for smooth updates
+            }
+        }
+
+        // --- 5. ATTACH EVENT LISTENERS ---
+        fabricSelect.addEventListener('change', calculateComfort);
+        tempSlider.addEventListener('input', calculateComfort);
+        humiditySlider.addEventListener('input', calculateComfort);
+        windSelect.addEventListener('change', calculateComfort);
+        activitySelect.addEventListener('change', calculateComfort);
+
+        // --- 6. INITIALIZE ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            calculateComfort();
+        });
+    </script>
+</body>
+</html>
+
