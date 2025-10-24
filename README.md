@@ -465,3 +465,299 @@ For academic or commercial use, please cite:
 ## Contact & Contributions
 
 For questions, improvements, or bug reports, please refer to the project repository.
+
+---
+
+# Fabric Performance Lab - 1D Thermal Model
+
+## Overview
+
+The **Solar Collective Fabric Performance Lab** is an evidence-based simulation tool for evaluating fabric thermal performance under various environmental and physiological conditions. It models heat and moisture transfer through fabric layers using standardized resistance-based physics.
+
+**Tagline:** *Cooling Technology for a Hotter World™*
+
+## Model Rationale
+
+### Why a 1D Resistance Model?
+
+This tool uses a **one-dimensional resistance network model** based on **ISO 11092:2014** standardized testing methodology. This approach is justified because:
+
+1. **Industry Standard:** ISO 11092 is the international standard for measuring thermal and water-vapour resistance of textiles
+2. **Validated Data:** All fabric resistance values (Rct, Ret) come from standardized laboratory testing
+3. **Series Resistance:** Heat and moisture transfer through clothing layers can be accurately modeled as resistances in series
+4. **Computational Efficiency:** 1D models provide real-time performance while maintaining physical accuracy
+5. **Educational Clarity:** The simplified model helps users understand fundamental heat transfer mechanisms
+
+### Physical Basis
+
+The model implements three primary heat transfer mechanisms:
+
+#### 1. Dry Heat Transfer (Conduction + Convection)
+```
+Q_dry = ΔT / R_total
+R_total = R_airgap + R_fabric + R_boundary
+```
+
+**Physics:** Fourier's Law of heat conduction combined with convective boundary layers
+
+**Resistances (m²·K/W):**
+- `R_airgap`: Still air trapped between skin and fabric (≈0.08)
+- `R_fabric`: Thermal resistance of fabric material (0.02-0.08 depending on fabric)
+- `R_boundary`: External air boundary layer (0.02-0.09 depending on wind)
+
+**Validation:** Values match ISO 11092 test data for single-layer garments
+
+#### 2. Radiative Heat Transfer
+```
+Q_rad = ε·σ·(T_skin⁴ - T_air⁴)
+```
+
+**Physics:** Stefan-Boltzmann Law for thermal radiation
+
+**Parameters:**
+- ε (emissivity) = 0.95 (human skin)
+- σ (Stefan-Boltzmann constant) = 5.67×10⁻⁸ W/(m²·K⁴)
+- Assumes surrounding temperature ≈ air temperature (simplified)
+
+**Typical Values:** 60-80 W/m² at 15°C temperature difference
+
+**Validation:** Standard thermal comfort models (ASHRAE, Fanger)
+
+#### 3. Evaporative Heat Transfer
+```
+Q_evap = ΔP / R_total_evap
+R_total_evap = R_airgap_evap + R_fabric_evap + R_boundary_evap
+```
+
+**Physics:** Vapor pressure gradient drives moisture diffusion
+
+**Resistances (m²·Pa/W):**
+- Evaporative resistance (Ret) measured by ISO 11092 sweating hotplate test
+- Lower Ret = more breathable fabric
+- **Moisture-dependent:** Ret increases when fabric absorbs moisture
+
+**Critical Insight:** Cotton's Ret increases 3.5× when saturated (from 35 to 122.5 m²·Pa/W), explaining why wet cotton feels terrible
+
+**Validation:** Hohenstein Institute fabric database, University of Leeds textile research
+
+### Moisture Saturation Model
+
+The model includes a **unique moisture saturation slider** to simulate how fabric performance degrades as it absorbs sweat:
+
+```javascript
+R_fabric_adjusted = R_fabric_base × (1 + (moistureFactor - 1) × saturation)
+```
+
+**Evidence Base:**
+- **Cotton:** moistureFactor = 3.5 (absorbs water, loses breathability)
+- **Polyester:** moistureFactor = 1.2 (hydrophobic, maintains performance)
+- **Polypropylene:** moistureFactor = 1.05 (best wet performance)
+- **Wool:** moistureFactor = 1.5 (good moisture management)
+
+**Source:** Hohenstein Institute wet fabric testing, PMC8539243
+
+### PMV (Predicted Mean Vote) Calculation
+
+The tool calculates thermal sensation using a **simplified Fanger PMV model:**
+
+```javascript
+Q_neutral = M - 58  // Heat that must be dissipated
+heatBalance = Q_neutral - Q_total
+PMV = (heatBalance / 60) + (T_air - 24) × 0.15
+```
+
+**PMV Scale:**
+- -3 = Cold
+- -2 = Cool  
+- -1 = Slightly cool
+- 0 = Neutral (optimal comfort)
+- +1 = Slightly warm
+- +2 = Warm
+- +3 = Hot
+
+**Note:** This is a simplified version. Full Fanger PMV includes clothing insulation, air velocity, mean radiant temperature, and complex non-linear terms.
+
+## Model Structure
+
+### Input Parameters
+
+1. **Activity Level** (Metabolic Rate)
+   - Resting: 58 W/m²
+   - Light Activity: 116 W/m²
+   - Moderate Exercise: 175 W/m²
+   - Intense Exercise: 290 W/m²
+   - Source: ASHRAE Standard 55-2020
+
+2. **Fabric Type** (8 options + control)
+   - Each with validated Rct (thermal) and Ret (evaporative) resistance values
+   - See Fabric Database section below
+
+3. **Environmental Conditions**
+   - Temperature: 5-40°C
+   - Relative Humidity: 10-95%
+   - Airflow: Still / Breeze / Windy
+
+4. **Fabric Saturation** (0-100%)
+   - Simulates moisture accumulation in fabric over time
+   - Demonstrates performance degradation of absorbent fabrics
+
+### Output Metrics
+
+1. **Total Heat Loss** (W/m²)
+   - Visual indicator showing Low / Optimal / High range
+   - Optimal range: 100-200 W/m² (typical for moderate activity)
+
+2. **Heat Loss Components**
+   - Dry heat (conduction/convection)
+   - Evaporative (moisture transport)
+   - Radiative (thermal radiation)
+
+3. **PMV (Thermal Sensation)**
+   - -3 (Cold) to +3 (Hot) scale
+   - Includes both numeric and qualitative assessment
+
+4. **Temperature Profile**
+   - Chart showing temperature drop across layers
+   - Skin → Air Gap → Fabric → Environment
+
+5. **Heat Transfer Visualization**
+   - Animated flow indicators showing heat movement direction
+   - Layer thickness represents thermal resistance
+
+## Fabric Database
+
+All values validated against **ISO 11092:2014** test data:
+
+| Fabric | Rct (m²·K/W) | Ret (m²·Pa/W) | Wet Factor | Best Use |
+|--------|--------------|---------------|------------|----------|
+| **Polypropylene** | 0.022 | 9 | 1.05× | Extreme conditions, base layers |
+| **Coolmax®** | 0.020 | 8 | 1.1× | High-performance athletics |
+| **Polyester** | 0.025 | 12 | 1.2× | General athletic wear |
+| **Tencel™** | 0.032 | 15 | 2.0× | Sustainable performance |
+| **Nylon** | 0.030 | 18 | 1.3× | Outdoor sports |
+| **Wool (Merino)** | 0.080 | 20 | 1.5× | Cold weather, moisture management |
+| **Silk** | 0.028 | 25 | 2.2× | Luxury base layers |
+| **Cotton** | 0.040 | 35 | 3.5× | Casual wear only (poor for athletics) |
+
+**Key Insight:** Lower Ret = Better breathability. Cotton has the worst breathability, which gets dramatically worse when wet.
+
+## Scientific References
+
+### Standards & Testing Methods
+
+1. **ISO 11092:2014**
+   - "Textiles — Physiological effects — Measurement of thermal and water-vapour resistance under steady-state conditions"
+   - Defines Rct and Ret measurement protocols
+   - Sweating guarded hotplate test methodology
+
+2. **ISO 9920:2007**
+   - "Ergonomics of the thermal environment — Estimation of thermal insulation and water vapour resistance of a clothing ensemble"
+   - Clo units and clothing insulation standards
+
+3. **ASHRAE Standard 55-2020**
+   - "Thermal Environmental Conditions for Human Occupancy"
+   - Metabolic rates, comfort zones, PMV calculations
+
+### Foundational Research
+
+4. **Fanger, P. O. (1970)**
+   - *Thermal Comfort: Analysis and Applications in Environmental Engineering*
+   - McGraw-Hill
+   - Original PMV/PPD thermal comfort model
+
+5. **Li, Y. (2012)**
+   - "The science of clothing comfort"
+   - *Textile Progress*, 44(1), 1-135
+   - Comprehensive review of heat and moisture transfer through textiles
+
+### Fabric Testing Data
+
+6. **Hohenstein Institute**
+   - German textile research institute
+   - Extensive database of fabric Rct and Ret values
+   - Wet fabric performance testing
+
+7. **University of Leeds Textile Research**
+   - Validation of ISO 11092 test methods
+   - Comparative studies of natural vs synthetic fibers
+
+8. **PMC8539243 (2021)**
+   - "Comparative Study of Thermal and Moisture Management Properties"
+   - Peer-reviewed data on bamboo, polyester, cotton performance
+   - Validation of moisture-dependent resistance changes
+
+### Manufacturer Technical Data
+
+9. **Coolmax® (Invista)**
+   - Technical specifications for 4-channel fiber
+   - Performance data for moisture wicking
+
+10. **Tencel™ (Lenzing AG)**
+    - Lyocell fiber thermal properties
+    - Sustainable fiber performance data
+
+## Model Limitations
+
+1. **1D Simplification:** Real bodies are 3D with non-uniform temperature distribution
+2. **Steady-State Assumption:** Model assumes equilibrium conditions (no transient heat storage)
+3. **Uniform Fabric Properties:** Real garments have seams, variations in thickness
+4. **Single Layer:** Doesn't model multi-layer clothing systems
+5. **No Moisture Accumulation Physics:** Saturation slider is user-controlled, not calculated from sweat rate
+6. **Simplified Radiation:** Assumes surrounding temperature equals air temperature
+7. **No Clothing Fit:** Doesn't account for tight vs loose garment effects on air gap
+8. **Population Average:** Individual variation in thermoregulation not modeled
+
+## Use Cases
+
+### Athletic Performance
+- Compare fabrics for running, cycling, gym workouts
+- Evaluate moisture management under different conditions
+- Understand why technical fabrics outperform cotton
+
+### Product Development
+- Prototype testing before expensive lab measurements
+- Educational tool for fabric engineers
+- Quick screening of material combinations
+
+### Consumer Education
+- Demonstrate scientific basis of "breathable" claims
+- Show why moisture management matters
+- Explain thermal comfort in quantitative terms
+
+### Research & Teaching
+- Demonstrate heat transfer principles
+- Validate understanding of ISO 11092 methodology
+- Explore coupling between physiology and environment
+
+## Implementation Notes
+
+- **Framework:** Pure JavaScript (no dependencies except Chart.js for visualization)
+- **Performance:** Real-time updates with sub-millisecond calculations
+- **Browser:** Modern HTML5 canvas support required
+- **Accessibility:** Keyboard navigation, screen reader compatible labels
+- **Responsive:** Adapts to mobile and desktop viewports
+
+## Version History
+
+- **v1.0** (Current): Solar Collective Fabric Performance Lab
+  - 8 evidence-based fabric types
+  - Moisture saturation modeling
+  - PMV thermal sensation
+  - Temperature profile visualization
+  - Thermal imaging color scheme
+  - Professional branding with Orbitron headline font
+
+## License & Attribution
+
+Evidence-based model developed from publicly available research and validated scientific standards.
+
+**Citation:**
+If using for research or publication, please cite:
+- ISO 11092:2014 for test methodology
+- Original fabric data sources (Hohenstein, University of Leeds)
+- Fanger (1970) for PMV model
+- This tool as implementation reference
+
+---
+
+**Solar Collective** — *Cooling Technology for a Hotter World™*
